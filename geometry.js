@@ -31,16 +31,17 @@ const K = {
   wall: 3.6,       // parete di impugnatura e corpo della testa
   plateT: 2,       // spessore della piastra con la feritoia
   slotClr: 0.3,    // gioco della feritoia per lato
-  threadLen: 20,   // lunghezza filetto
-  threadEng: 13,   // impegno nominale testa/impugnatura (il resto è regolazione)
-  thrE: 0.8,       // eccentricità del filetto (profondità = 2e)
-  pitch: 4,        // passo
-  thrClr: 0.35,    // gioco radiale del filetto
+  threadLen: 21,   // lunghezza filetto (3 spire)
+  threadEng: 14,   // impegno nominale testa/impugnatura (il resto è regolazione)
+  thrDepth: 2,     // profondità del filetto tondo
+  pitch: 7,        // passo (fianchi a ~45°: stampabile in verticale)
+  thrClr: 0.5,     // gioco radiale del filetto (~0,35 mm sul fianco)
+  maleWall: 1.6,   // parete sotto il fondo del filetto maschio
   floor: 2,        // fondo chiuso dell'impugnatura
-  armT: 3,         // spessore bracci forcella
+  armT: 4.5,       // spessore bracci forcella
   armGap: 0.8,     // distanza braccio-rullo
   boss: 0.5,       // rondella integrata sul braccio
-  armR: 6.5,       // raggio della testa del braccio attorno all'asse
+  armR: 7.5,       // raggio della testa del braccio attorno all'asse
   bossR: 4.5,      // raggio della rondella integrata
   pinR: 2.5,       // perno stampato Ø5
   pinFlat: 2.25,   // piatti del perno (stampa sdraiato): mezza altezza
@@ -230,31 +231,35 @@ export function buildAll(wasm, font, params) {
   const zb = -plateT - (p.markerLen - p.tipLen);   // fondo del marker
   // Corpo in due pezzi: TESTA (piastra, forcella, ghiera con filetto femmina) e IMPUGNATURA
   // (tubo chiuso sul fondo con filetto maschio). Il filetto fa anche da regolazione di lunghezza.
-  const e = K.thrE, P = K.pitch, Lt = K.threadLen;
+  const P = K.pitch, Lt = K.threadLen, hT = K.thrDepth;
   const zh = zConeBase - 2 - Lt - 5;               // retro della testa (bocca del filetto)
   const shift = Lt - K.threadEng;                  // filetto maschio scoperto in posizione nominale
   const zs = zh - shift;                           // spalla dell'impugnatura (inizio filetto maschio)
   const zr = zb - K.floor;                         // fondo dell'impugnatura
-  const Rj = Rb + 5;                               // ghiera della testa
   if (zs - zr < 25) warnings.push('Marker corto: l\'impugnatura viene molto bassa, controlla le misure.');
   const zc = zTip + Ro - K.contact;                // asse del rullo
 
   if (p.tipLen <= plateT + 2) warnings.push('La punta sporge troppo poco oltre la piastra: controlla "sporgenza punta".');
 
-  // filettatura eccentrica (profilo circolare ruotato lungo z)
-  const Rm = Rb + e + 1.2;   // maschio sull'impugnatura: parete minima 1,2 mm sopra il foro
-  const femMax = Rm + K.thrClr + e;
-  const helix = (r, len) =>
-    CrossSection.circle(r, seg(r)).translate([e, 0]).extrude(len, Math.ceil(len / 0.25), (360 * len) / P);
+  // Filetto tondo a passo largo. Una sezione "a chiocciola" r(θ) = fondo + h·(1+cos θ)/2 estrusa con
+  // torsione di 360° per passo dà in ogni direzione un profilo assiale sinusoidale: creste arrotondate,
+  // fianchi a ~45°, un solo principio. Il femmina è la stessa sezione allargata del gioco.
+  const rootM = Rb + K.maleWall;                   // fondo del maschio
+  const maleMax = rootM + hT;                      // cresta del maschio = diametro dell'impugnatura
+  const femMax = maleMax + K.thrClr;
+  const Rj = femMax + 2.2;                         // testa: parete attorno al femmina
+  const thread = (clr, len) => {
+    const n = seg(maleMax), pts = [];
+    for (let i = 0; i < n; i++) {
+      const th = (TAU * i) / n, r = rootM + clr + hT * (0.5 + 0.5 * Math.cos(th));
+      pts.push([r * Math.cos(th), r * Math.sin(th)]);
+    }
+    return new CrossSection([pts]).extrude(len, Math.ceil(len / 0.25), (360 * len) / P);
+  };
 
-  // testa: ghiera (Rj) zigrinata che si raccorda a 45° al corpo (Rh), smusso anteriore
+  // testa: cilindro pieno Ø Rj, zigrinato sulla ghiera, smusso anteriore
   const zRingTop = zh + Lt + 5;
-  let handle = Manifold.union([
-    cyl(zRingTop - zh, Rj).translate([0, 0, zh]),
-    cyl(Rj - Rh, Rj, Rh).translate([0, 0, zRingTop]),
-    cyl(-2 - zRingTop, Rh).translate([0, 0, zRingTop]),
-    cyl(2, Rh, Rh - 1.5).translate([0, 0, -2]),
-  ]);
+  let handle = cyl(-2 - zh, Rj).translate([0, 0, zh]).add(cyl(2, Rj, Rj - 1.5).translate([0, 0, -2]));
   const ringKnurl = [];
   const nRK = Math.round((TAU * Rj) / 4);
   for (let i = 0; i < nRK; i++) {
@@ -263,11 +268,11 @@ export function buildAll(wasm, font, params) {
   }
   handle = handle.subtract(Manifold.union(ringKnurl));
 
-  // forcella
+  // forcella: bracci spessi, base larga quanto la testa
   const x0 = W / 2 + K.armGap;
   const xOut = x0 + K.armT;
-  let yb = Math.min(9, Math.sqrt(Math.max(Rh * Rh - xOut * xOut, 0)) - 1.6);
-  if (yb < K.armR) { yb = K.armR; warnings.push('Manico stretto: la base dei bracci sporge dal profilo, va bene ma è meno robusta.'); }
+  let yb = Math.min(14, Math.sqrt(Math.max(Rj * Rj - xOut * xOut, 0)) - 1);
+  if (yb < K.armR) { yb = K.armR; warnings.push('Testa stretta: la base dei bracci sporge dal profilo, va bene ma è meno robusta.'); }
   const armProfile = CrossSection.hull([
     CrossSection.square([2 * yb, 1.5]).translate([-yb, -1.5]),
     CrossSection.circle(K.armR, 64).translate([0, zc]),
@@ -282,7 +287,7 @@ export function buildAll(wasm, font, params) {
   // cavità della testa: filetto femmina + smusso a 45° (stampabile senza supporti) + foro + cono + feritoia
   const femTop = zh + Lt + 1;
   const cavity = Manifold.union([
-    helix(Rm + K.thrClr, Lt + 1 + P).translate([0, 0, zh - P]),
+    thread(K.thrClr, Lt + 1 + P).translate([0, 0, zh - P]),
     cyl(femMax - Rb, femMax, Rb).translate([0, 0, femTop - 0.01]),
     cyl(zConeBase - zh + 1, Rb).translate([0, 0, zh - 1]),
     cyl(zConeTop - zConeBase, Rb, neckR).translate([0, 0, zConeBase]),
@@ -291,12 +296,11 @@ export function buildAll(wasm, font, params) {
   handle = handle.subtract(cavity).subtract(cylX(2 * xOut + 2, K.axleHole, -xOut - 1, zc));
 
   // ---------------------------------------------------------------- impugnatura
-  const maleMax = Rm + e;
-  const chamfer = cyl(Lt - 1, maleMax + 0.5).add(cyl(1, maleMax + 0.5, maleMax - 1).translate([0, 0, Lt - 1]));
+  const chamfer = cyl(Lt - 1.5, maleMax + 0.5).add(cyl(1.5, maleMax + 0.5, maleMax - 1).translate([0, 0, Lt - 1.5]));
   let sleeve = Manifold.union([
     cyl(zs - zr - 0.6, Rh).translate([0, 0, zr + 0.6]),
     cyl(0.6, Rh - 0.6, Rh).translate([0, 0, zr]),
-    helix(Rm, Lt).intersect(chamfer).translate([0, 0, zs - 0.01]),
+    thread(0, Lt).intersect(chamfer).translate([0, 0, zs - 0.01]),
   ]).subtract(cyl(zs + Lt - zb + 1, Rb).translate([0, 0, zb]));  // foro: il fondo resta chiuso
   // scanalature di presa
   const gz0 = zr + 4, gz1 = zs - 4;

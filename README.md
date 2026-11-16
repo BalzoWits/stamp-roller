@@ -13,7 +13,8 @@ Tutto gira nel browser: nessun server, si pubblica su GitHub Pages così com'è.
 - **Corpo in due pezzi**, avvitati tra loro:
   - **Testa** (~35 mm + forcella): piastra frontale con **feritoia** che allinea la punta al rullo e fa da battuta
     all'ultimo collarino, cono di invito, ghiera zigrinata con filetto femmina, forcella per il perno.
-  - **Impugnatura**: tubo su misura del corpo del marker, chiuso sul fondo, con filetto maschio. Il filetto
+  - **Impugnatura**: tubo su misura del corpo del marker, chiuso sul fondo, con filetto maschio tondo a passo
+    largo (passo 7 mm, profondità 2 mm, fianchi a ~45°, 3 spire). Il filetto
     spinge il marker contro la battuta e recupera ±7 mm di errore sulla lunghezza; svitandola il marker resta
     scoperto quasi per intero e si estrae a mano.
 - **Rullo in due pezzi** (default, disattivabile): mozzo rigido in PLA/PETG con bordino di battuta e 8 denti
@@ -57,7 +58,7 @@ Librerie in `lib/licenses/` (manifold-3d Apache-2.0, three MIT, opentype.js MIT)
 
 - Misure reali dei marker (preset salvabili dal sito): i valori di default (Ø 30, 140 mm, sporgenza 12) sono di partenza.
 - Verso del testo: stampare una parola asimmetrica (es. "RF") e controllare che il segno si legga dritto.
-- Gioco della filettatura (0,35 mm) e del foro corpo (0,25 mm) sulla propria stampante.
+- Gioco della filettatura (0,5 mm radiale, `thrClr`) e del foro corpo (0,25 mm) sulla propria stampante.
 - Calzata del battistrada TPU sul mozzo (interferenza 0,1 mm, costante `tpuFit` in `geometry.js`).
 - Scatto del perno: dente 0,45 mm, taglio 1,3 mm (`pinLip`, `pinSlot`); foro nei bracci Ø5,3.
 - Pressione punta–rullo: interferenza nominale 0,3 mm, regolabile dal tappo.
