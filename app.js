@@ -33,7 +33,17 @@ const store = {
 
 const NUM = ['textH', 'gap', 'rollerD', 'relief', 'bodyD', 'markerLen', 'tipLen', 'neckD', 'tipW', 'tipT'];
 const MARKER_KEYS = ['bodyD', 'markerLen', 'tipLen', 'neckD', 'tipW', 'tipT'];
-const BUILTIN_PRESETS = [{ name: 'Generico 15 mm (valori di partenza)', builtin: true, ...pick(DEFAULTS, MARKER_KEYS) }];
+// Le due punte più comuni: la larghezza decide feritoia, rullo e forcella. Spessori da verificare.
+const TIPS = { 15: { tipW: 15, tipT: 5 }, 20: { tipW: 20, tipT: 6 } };
+const BUILTIN_PRESETS = [
+  { name: 'Generico 15 mm (valori di partenza)', builtin: true, ...pick(DEFAULTS, MARKER_KEYS) },
+  { name: 'Generico 20 mm (valori di partenza)', builtin: true, ...pick(DEFAULTS, MARKER_KEYS), ...TIPS[20], neckD: 24 },
+];
+
+function syncTipRadio() {
+  const v = parseFloat($('tipW').value) >= 17.5 ? '20' : '15';
+  document.querySelector(`input[name=tipSize][value="${v}"]`).checked = true;
+}
 
 function pick(o, keys) { return Object.fromEntries(keys.map((k) => [k, o[k]])); }
 
@@ -51,6 +61,7 @@ function writeParams(p) {
   for (const k of NUM) if (p[k] != null) $(k).value = p[k];
   if (p.diameterMode) document.querySelector(`input[name=diameterMode][value=${p.diameterMode}]`).checked = true;
   if (p.split != null) $('split').checked = p.split;
+  syncTipRadio();
   if (p.fontId && [...$('font').options].some((o) => o.value === p.fontId)) $('font').value = p.fontId;
 }
 
@@ -351,7 +362,12 @@ let presets = fillPresets();
 writeParams({ ...DEFAULTS, ...store.get('params', {}), fontId: (store.get('params', {}).fontId === 'custom' ? FONTS[0].id : store.get('params', {}).fontId) });
 
 for (const el of document.querySelectorAll('.panel input:not([type=file]), .panel select:not(#preset)')) {
-  el.addEventListener('input', () => { if (MARKER_KEYS.includes(el.id)) $('preset').value = ''; requestBuild(); });
+  el.addEventListener('input', () => {
+    if (el.name === 'tipSize') writeParams(TIPS[el.value]);
+    if (MARKER_KEYS.includes(el.id) || el.name === 'tipSize') $('preset').value = '';
+    if (el.id === 'tipW') syncTipRadio();
+    requestBuild();
+  });
 }
 $('preset').addEventListener('change', () => {
   const pr = presets[+$('preset').value];

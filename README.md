@@ -1,6 +1,8 @@
 # Stamp Roller
 
-Generatore web di un rullo-timbro per marker da 15 mm con punta a scalpello (Molotow, Montana, Grog…).
+Generatore web di un rullo-timbro per marker con punta a scalpello da **15 o 20 mm** (Molotow, Montana, Grog…).
+La larghezza della punta decide feritoia, rullo (punta + 3 mm), forcella e perno; gli spessori di default
+(5 mm per la 15, 6 mm per la 20) sono da verificare sui marker reali.
 Si sceglie la scritta, si inseriscono le misure del proprio marker e si scaricano i pezzi da stampare in 3D.
 Tutto gira nel browser: nessun server, si pubblica su GitHub Pages così com'è.
 

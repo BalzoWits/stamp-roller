@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Stamp Roller</title>
-<meta name="description" content="Genera un rullo-timbro personalizzato per marker da 15 mm, pronto da stampare in 3D.">
+<meta name="description" content="Genera un rullo-timbro personalizzato per marker da 15 o 20 mm, pronto da stampare in 3D.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%23f5a524' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 <script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo">◎</span> Stamp Roller <small>per marker da 15 mm</small></div>
+  <div class="brand"><span class="logo">◎</span> Stamp Roller <small>per marker da 15 e 20 mm</small></div>
   <div id="status" class="status">Caricamento…</div>
 </header>
 
@@ -30,7 +30,7 @@
       </label>
       <div class="row">
         <label>Altezza lettere <span class="unit">mm</span>
-          <input id="textH" type="number" min="4" max="16" step="0.5" value="10">
+          <input id="textH" type="number" min="4" max="20" step="0.5" value="10">
         </label>
         <label>Spazio tra ripetizioni <span class="unit">mm</span>
           <input id="gap" type="number" min="2" max="60" step="1" value="10">
@@ -59,6 +59,10 @@
 
     <section>
       <h2>Il tuo marker</h2>
+      <div class="seg" role="radiogroup" aria-label="Larghezza punta">
+        <label><input type="radio" name="tipSize" value="15" checked> Punta 15 mm</label>
+        <label><input type="radio" name="tipSize" value="20"> Punta 20 mm</label>
+      </div>
       <svg class="measure" viewBox="0 0 300 92" aria-hidden="true">
         <rect x="70" y="30" width="170" height="34" rx="5" class="mk"/>
         <rect x="46" y="36" width="24" height="22" rx="2" class="mk"/>
@@ -93,7 +97,7 @@
         </div>
         <div class="row">
           <label>Larghezza punta <span class="unit">mm</span>
-            <input id="tipW" type="number" min="10" max="20" step="0.1" value="15">
+            <input id="tipW" type="number" min="10" max="22" step="0.1" value="15">
           </label>
           <label>Spessore punta <span class="unit">mm</span>
             <input id="tipT" type="number" min="2" max="9" step="0.1" value="5">

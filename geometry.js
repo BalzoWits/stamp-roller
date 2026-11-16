@@ -1,4 +1,4 @@
-// Geometria parametrica del rullo-timbro per marker da 15 mm.
+// Geometria parametrica del rullo-timbro per marker con punta a scalpello da 15 o 20 mm.
 // Modulo puro: gira identico nel browser (worker) e in node (test).
 // Assi (assemblato): il marker punta verso +Z, la faccia anteriore del manico è a z = 0,
 // l'asse del rullo è parallelo a X (stessa direzione della larghezza della punta).
@@ -20,7 +20,6 @@ export const DEFAULTS = {
   gap: 10,          // spazio tra una ripetizione e l'altra
   diameterMode: 'auto', // 'auto' | 'fixed'
   rollerD: 36,      // diametro esterno (solo in modalità fixed)
-  rollerW: 18,      // larghezza del rullo
   minStroke: 0.8,   // tratto minimo stampabile
   split: true,      // rullo in due pezzi: mozzo rigido + battistrada TPU
 };
@@ -136,7 +135,8 @@ export function buildAll(wasm, font, params) {
   if (p.neckD / 2 + 0.5 > p.bodyD / 2 + K.boreClr - 0.5) warnings.push('Il collarino non può essere più largo del corpo: uso il massimo possibile.');
 
   // ---------------------------------------------------------------- testo e rullo
-  const W = p.rollerW;
+  const W = p.tipW + 3;   // rullo largo quanto la punta + 1,5 mm per lato
+  if (p.tipW < 10 || p.tipW > 22) warnings.push(`Larghezza punta ${p.tipW} mm fuori dal campo previsto (10–22).`);
   const split = !!p.split;
   const fl = split ? K.hubFlange : 0;     // il bordino del mozzo ruba larghezza al battistrada
   const txt = (p.text || '').trim();
