@@ -12,7 +12,8 @@ Tutto gira nel browser: nessun server, si pubblica su GitHub Pages così com'è.
   il diametro si adatta alla scritta (ripetuta se corta, rimpicciolita se troppo lunga, Ø 24–48 mm).
 - **Corpo in due pezzi**, avvitati tra loro:
   - **Testa** (~35 mm + forcella): piastra frontale con **feritoia** che allinea la punta al rullo e fa da battuta
-    all'ultimo collarino, cono di invito, ghiera zigrinata con filetto femmina, forcella per il perno.
+    all'ultimo collarino, cono di invito, ghiera zigrinata con filetto femmina, forcella a cunei (faccia interna
+    dritta, esterna inclinata fino al bordo della testa) con sedi piane per testa e scatto del perno.
   - **Impugnatura**: tubo su misura del corpo del marker, chiuso sul fondo, con filetto maschio tondo a passo
     largo (passo 7 mm, profondità 2 mm, fianchi a ~45°, 3 spire). Il filetto
     spinge il marker contro la battuta e recupera ±7 mm di errore sulla lunghezza; svitandola il marker resta

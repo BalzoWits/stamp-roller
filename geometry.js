@@ -271,16 +271,18 @@ export function buildAll(wasm, font, params) {
   // forcella: bracci spessi, base larga quanto la testa
   const x0 = W / 2 + K.armGap;
   const xOut = x0 + K.armT;
-  let yb = Math.min(14, Math.sqrt(Math.max(Rj * Rj - xOut * xOut, 0)) - 1);
-  if (yb < K.armR) { yb = K.armR; warnings.push('Testa stretta: la base dei bracci sporge dal profilo, va bene ma è meno robusta.'); }
-  const armProfile = CrossSection.hull([
-    CrossSection.square([2 * yb, 1.5]).translate([-yb, -1.5]),
-    CrossSection.circle(K.armR, 64).translate([0, zc]),
-  ]);
-  const arm = armProfile.extrude(K.armT).warp((v) => { const a = v[0], b = v[1], c = v[2]; v[0] = c; v[1] = a; v[2] = b; });
+  // Ogni braccio è un cuneo: inviluppo tra la testa attorno al perno (spessa armT) e tutto il
+  // segmento di testa oltre la faccia interna. Faccia interna dritta, faccia esterna inclinata
+  // fino al bordo della testa: regge la flessione laterale.
+  const baseSeg = CrossSection.circle(Rj - 1, seg(Rj))
+    .intersect(CrossSection.square([Rj, 2 * Rj]).translate([x0, -Rj]))
+    .extrude(1.5).translate([0, 0, -1.5]);
+  const arm = Manifold.hull([baseSeg, cylX(K.armT, K.armR, x0, zc)]);
+  // sede piana per testa e scatto del perno sulla faccia esterna inclinata
+  const spot = cylX(Rj, K.pinHeadR + 0.7, xOut, zc);
   handle = handle
-    .add(arm.translate([x0, 0, 0]))
-    .add(arm.translate([-xOut, 0, 0]))
+    .add(arm.subtract(spot))
+    .add(arm.subtract(spot).mirror([1, 0, 0]))
     .add(cylX(K.boss + 0.1, K.bossR, x0 - K.boss, zc))
     .add(cylX(K.boss + 0.1, K.bossR, -x0 - 0.1, zc));
 
