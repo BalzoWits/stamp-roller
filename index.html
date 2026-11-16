@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stamp Roller</title>
+<meta name="description" content="Genera un rullo-timbro personalizzato per marker da 15 mm, pronto da stampare in 3D.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%23f5a524' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./lib/three.module.js" } }</script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">◎</span> Stamp Roller <small>per marker da 15 mm</small></div>
+  <div id="status" class="status">Caricamento…</div>
+</header>
+
+<main class="layout">
+  <aside class="panel">
+    <section>
+      <h2>Scritta</h2>
+      <label>Testo
+        <input id="text" type="text" maxlength="60" value="CIAO" autocomplete="off">
+      </label>
+      <label>Font
+        <select id="font"></select>
+      </label>
+      <label class="file">…oppure carica un font (TTF, OTF, WOFF)
+        <input id="fontFile" type="file" accept=".ttf,.otf,.woff">
+      </label>
+      <div class="row">
+        <label>Altezza lettere <span class="unit">mm</span>
+          <input id="textH" type="number" min="4" max="16" step="0.5" value="10">
+        </label>
+        <label>Spazio tra ripetizioni <span class="unit">mm</span>
+          <input id="gap" type="number" min="2" max="60" step="1" value="10">
+        </label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Rullo</h2>
+      <div class="seg" role="radiogroup" aria-label="Diametro">
+        <label><input type="radio" name="diameterMode" value="auto" checked> Diametro automatico</label>
+        <label><input type="radio" name="diameterMode" value="fixed"> Diametro fisso</label>
+      </div>
+      <div class="row">
+        <label id="rollerDWrap">Diametro <span class="unit">mm</span>
+          <input id="rollerD" type="number" min="24" max="48" step="1" value="36">
+        </label>
+        <label>Rilievo <span class="unit">mm</span>
+          <input id="relief" type="number" min="0.6" max="2.5" step="0.1" value="1.2">
+        </label>
+      </div>
+      <p class="hint">In automatico il diametro si adatta al testo: se la scritta è corta viene ripetuta, se è troppo lunga viene rimpicciolita.</p>
+      <label class="chk opt"><input id="split" type="checkbox" checked> Rullo in due pezzi: mozzo rigido + battistrada in TPU</label>
+      <p class="hint">Il battistrada morbido prende meglio la vernice e si adatta alle superfici irregolari. Si infila a pressione sul mozzo, i denti lo tengono fermo. Si può cambiare scritta ristampando solo il battistrada.</p>
+    </section>
+
+    <section>
+      <h2>Il tuo marker</h2>
+      <svg class="measure" viewBox="0 0 300 92" aria-hidden="true">
+        <rect x="70" y="30" width="170" height="34" rx="5" class="mk"/>
+        <rect x="46" y="36" width="24" height="22" rx="2" class="mk"/>
+        <rect x="30" y="40" width="16" height="14" class="tip"/>
+        <line x1="30" y1="80" x2="240" y2="80" class="dim"/>
+        <text x="135" y="91" class="dt">B · lunghezza punta→fondo</text>
+        <line x1="256" y1="30" x2="256" y2="64" class="dim"/>
+        <text x="262" y="51" class="dt">A · Ø</text>
+        <line x1="30" y1="18" x2="46" y2="18" class="dim"/>
+        <text x="24" y="12" class="dt">C · sporgenza</text>
+      </svg>
+      <label>Preset
+        <select id="preset"></select>
+      </label>
+      <div class="row">
+        <label>A · Ø massimo <span class="unit">mm</span>
+          <input id="bodyD" type="number" min="15" max="45" step="0.1" value="30">
+        </label>
+        <label>B · Lunghezza <span class="unit">mm</span>
+          <input id="markerLen" type="number" min="80" max="220" step="0.5" value="140">
+        </label>
+      </div>
+      <details>
+        <summary>Misure avanzate</summary>
+        <div class="row">
+          <label>C · Sporgenza punta <span class="unit">mm</span>
+            <input id="tipLen" type="number" min="5" max="30" step="0.5" value="12">
+          </label>
+          <label>Ø ultimo collarino <span class="unit">mm</span>
+            <input id="neckD" type="number" min="15" max="30" step="0.5" value="20">
+          </label>
+        </div>
+        <div class="row">
+          <label>Larghezza punta <span class="unit">mm</span>
+            <input id="tipW" type="number" min="10" max="20" step="0.1" value="15">
+          </label>
+          <label>Spessore punta <span class="unit">mm</span>
+            <input id="tipT" type="number" min="2" max="9" step="0.1" value="5">
+          </label>
+        </div>
+        <p class="hint">La sporgenza è quanto esce la punta oltre l'ultimo collarino del marker: è la parte che passa nella feritoia.</p>
+      </details>
+      <div class="row tight">
+        <button id="savePreset" type="button" class="ghost">Salva come preset</button>
+        <button id="delPreset" type="button" class="ghost">Elimina preset</button>
+      </div>
+      <p class="hint">Il filetto tra testa e impugnatura recupera ±7 mm di errore sulla lunghezza: basta una misura col righello.</p>
+    </section>
+
+    <section>
+      <h2>Scarica</h2>
+      <div class="dl">
+        <button id="dl3mf" type="button" class="primary" disabled>Kit completo (.3mf)</button>
+      </div>
+      <p class="hint">Oppure i singoli pezzi in STL:</p>
+      <div id="dlParts" class="dl"></div>
+      <dl id="info" class="info"></dl>
+    </section>
+
+    <section>
+      <h2>Stampa e montaggio</h2>
+      <ol class="howto">
+        <li><b>Testa</b> in piedi con i bracci verso l'alto, <b>impugnatura</b> col fondo sul piatto, <b>mozzo</b> col bordino sul piatto, <b>perno</b> sdraiato sul lato piatto. Non servono supporti.</li>
+        <li>PLA o PETG, layer da 0,2 mm, 3–4 perimetri. Il perno al 100% di riempimento.</li>
+        <li><b>Battistrada in TPU</b> (95A), in piedi, lento (20–30 mm/s), layer da 0,12–0,16 mm per lettere nitide.</li>
+        <li>Infila il battistrada sul mozzo dal lato senza bordino, allineando i denti, fino in battuta.</li>
+        <li>Metti il rullo tra i bracci e spingi il <b>perno</b> dal lato della testa finché lo scatto passa dall'altra parte. Il rullo deve girare libero.</li>
+        <li>Carica il marker (pompa la punta), infilalo nella testa con la punta nella feritoia, poi avvita l'impugnatura finché la punta sfiora il rullo.</li>
+        <li>Se il rullo si impregna troppo, svita l'impugnatura di mezzo giro. Per cambiare marker la sviti del tutto: il marker resta fuori quasi per intero e si sfila a mano.</li>
+      </ol>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="toolbar">
+      <div class="seg small" role="radiogroup" aria-label="Vista">
+        <label><input type="radio" name="view" value="assembly" checked> Montato</label>
+        <label><input type="radio" name="view" value="print"> Piatto di stampa</label>
+      </div>
+      <label class="chk"><input id="showGhost" type="checkbox" checked> Mostra marker</label>
+      <label class="chk"><input id="spin" type="checkbox" checked> Gira rullo</label>
+      <button id="fit" type="button" class="ghost">Inquadra</button>
+    </div>
+    <div id="viewer" class="viewer"><div id="busy" class="busy">Genero il modello…</div></div>
+    <ul id="warnings" class="warnings"></ul>
+    <div class="imprint">
+      <div class="imprint-head"><h3>Anteprima del segno</h3><span id="imprintInfo"></span></div>
+      <canvas id="imprint" height="90"></canvas>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
