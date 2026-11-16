@@ -3,6 +3,7 @@ import { OrbitControls } from './lib/OrbitControls.js';
 import { parse } from './lib/opentype.module.js';
 import { DEFAULTS } from './geometry.js';
 import { toSTL, to3MF } from './export.js';
+import { PRINT, bambuObjectSettings } from './print-settings.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -306,6 +307,10 @@ function onResult({ data }, w) {
   renderWarnings(data.warnings);
   drawImprint();
   $('dl3mf').disabled = false;
+  const split = !!data.print.tire;
+  $('dl3mf').textContent = split ? 'Pezzi rigidi PLA/PETG (.3mf)' : 'Kit completo (.3mf)';
+  $('dl3mfTpu').hidden = !split;
+  renderSettings(data.print);
   setStatus(`Pronto · ${(data.ms / 1000).toFixed(1).replace('.', ',')} s`);
 }
 
@@ -349,12 +354,26 @@ function download(bytes, name, type) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 function slug() { return ($('text').value.trim() || 'liscio').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'timbro'; }
-$('dl3mf').onclick = () => {
-  const r = lastResult, lay = printLayout(r.print);
-  download(to3MF(Object.keys(r.print).map((k) => ({
-    name: `${PARTS[k].label} (${PARTS[k].mat})`, mesh: r.print[k], offset: lay[k],
-  }))), `stamproller-${slug()}.3mf`, 'model/3mf');
-};
+// Un 3MF per materiale: i pezzi rigidi insieme, il battistrada TPU da solo (piatto e impostazioni suoi).
+function download3MF(keys, file, title) {
+  const r = lastResult;
+  const sub = Object.fromEntries(keys.map((k) => [k, r.print[k]]));
+  const lay = printLayout(sub);
+  download(to3MF(keys.map((k) => ({
+    name: `${PARTS[k].label} (${PARTS[k].mat})`, mesh: sub[k], offset: lay[k], settings: bambuObjectSettings(PRINT[k]),
+  })), { title }), file, 'model/3mf');
+}
+$('dl3mf').onclick = () => download3MF(Object.keys(lastResult.print).filter((k) => k !== 'tire'),
+  `stamproller-${slug()}${lastResult.print.tire ? '-PLA-PETG' : ''}.3mf`, `Stamp Roller ${$('text').value.trim()}`);
+$('dl3mfTpu').onclick = () => download3MF(['tire'], `stamproller-${slug()}-battistrada-TPU.3mf`, `Stamp Roller battistrada ${$('text').value.trim()}`);
+
+function renderSettings(print) {
+  const rows = Object.keys(print).map((k) => {
+    const s = PRINT[k];
+    return `<tr><td>${PARTS[k].label}<small>${PARTS[k].mat} · ${s.placement}</small></td><td>${s.walls}</td><td>${s.infill}%</td><td>${String(s.layer).replace('.', ',')}</td></tr>`;
+  });
+  $('settings').innerHTML = `<tr><th>Pezzo</th><th>Pareti</th><th>Riemp.</th><th>Layer</th></tr>${rows.join('')}`;
+}
 
 // ------------------------------------------------------------------ eventi
 $('font').innerHTML = FONTS.map((f) => `<option value="${f.id}">${f.name}</option>`).join('');

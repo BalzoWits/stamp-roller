@@ -27,6 +27,16 @@ Tutto gira nel browser: nessun server, si pubblica su GitHub Pages così com'è.
 Pezzi stampabili senza supporti: testa in piedi (bracci in alto), impugnatura col fondo sul piatto,
 mozzo col bordino sul piatto, battistrada in piedi, perno sdraiato. Nessuna viteria.
 
+## Impostazioni di stampa nel 3MF
+
+I .3mf scaricati contengono `Metadata/model_settings.config` (formato Bambu Studio / OrcaSlicer) con pareti,
+riempimento, altezza layer e supporti spenti per ogni pezzo; i valori stanno in `print-settings.js` e sono gli
+stessi della tabella nella pagina. Verificato con Bambu Studio 02.07 da riga di comando: legge il file anche da un
+3MF non suo (il battistrada esce a 0,16 mm con un processo da 0,20). Non si salvano stampante, processo e
+filamento: un progetto Bambu completo è legato al modello di stampante e il 3MF "finto progetto" lo fa crashare;
+anche i piatti multipli vengono ignorati fuori dai progetti, per questo il **battistrada TPU ha un 3MF suo**.
+Gli altri slicer ignorano il file e prendono solo la geometria.
+
 ## Struttura
 
 | File | Ruolo |
@@ -34,7 +44,8 @@ mozzo col bordino sul piatto, battistrada in piedi, perno sdraiato. Nessuna vite
 | `geometry.js` | geometria parametrica (manifold-3d + font opentype), modulo puro usato da worker e test |
 | `worker.js` | genera i pezzi in un Web Worker (uno nuovo per ogni build) |
 | `app.js` | interfaccia, anteprima three.js, anteprima del segno, preset, download |
-| `export.js` | STL binario e 3MF (zip senza compressione), senza dipendenze |
+| `export.js` | STL binario e 3MF (zip senza compressione) con impostazioni per oggetto, senza dipendenze |
+| `print-settings.js` | impostazioni di stampa consigliate per pezzo (tabella nella pagina + 3MF) |
 | `lib/` | librerie copiate da `node_modules` (manifold-3d 3.5.5, opentype.js 1.3.4, three 0.187) |
 | `fonts/` | font OFL da @fontsource (WOFF) |
 | `test/node-test.mjs` | build headless di 5 configurazioni: validità, collisioni tra pezzi, ingombri; scrive `out/` |

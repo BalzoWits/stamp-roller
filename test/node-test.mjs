@@ -4,6 +4,7 @@ import opentype from 'opentype.js';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { buildAll } from '../geometry.js';
 import { toSTL, to3MF } from '../export.js';
+import { PRINT, bambuObjectSettings } from '../print-settings.js';
 
 const wasm = await Module();
 wasm.setup();
@@ -50,9 +51,11 @@ for (const c of cases) {
   console.log(' ingombri stampa', Object.fromEntries(Object.entries(r.print).map(([k, m]) => [k, bb(m)])));
   if (c.name === 'default') {
     for (const [k, m] of Object.entries(r.print)) writeFileSync(new URL(`../out/${k}.stl`, import.meta.url), toSTL(m.getMesh()));
-    writeFileSync(new URL('../out/kit.3mf', import.meta.url), to3MF(
-      Object.entries(r.print).map(([k, m], i) => ({ name: k, mesh: m.getMesh(), offset: [i * 45, 0] })),
-    ));
+    const kit = (keys) => to3MF(keys.map((k, i) => ({
+      name: k, mesh: r.print[k].getMesh(), offset: [i * 50 - 100, 0], settings: bambuObjectSettings(PRINT[k]),
+    })), { title: 'test' });
+    writeFileSync(new URL('../out/kit.3mf', import.meta.url), kit(Object.keys(r.print).filter((k) => k !== 'tire')));
+    writeFileSync(new URL('../out/tpu.3mf', import.meta.url), kit(['tire']));
   }
 }
 console.log(failed ? '\nFALLITO: collisioni inattese' : '\nOK');

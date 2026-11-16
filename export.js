@@ -21,23 +21,32 @@ export function toSTL(mesh) {
   return new Uint8Array(buf);
 }
 
-// objects: [{ name, mesh, offset:[x,y] }]
-export function to3MF(objects) {
+const xmlAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+// objects: [{ name, mesh, offset:[x,y], settings?: { chiave: valore } }]
+// Le settings finiscono in Metadata/model_settings.config (formato Bambu Studio / OrcaSlicer):
+// verificato con Bambu Studio 02.07 che le legge anche da un 3MF non salvato da lui.
+// center: dove mettere il centro del gruppo; i piatti Bambu partono da (0,0), 128 = centro di un 256×256.
+export function to3MF(objects, { title, center = [128, 128] } = {}) {
   const enc = new TextEncoder();
-  let res = '', items = '';
+  let res = '', items = '', cfg = '';
   objects.forEach((ob, idx) => {
     const id = idx + 1;
     const { vertProperties: V, triVerts: T, numProp: np } = ob.mesh;
-    const [dx, dy] = ob.offset || [0, 0];
+    const dx = (ob.offset ? ob.offset[0] : 0) + center[0], dy = (ob.offset ? ob.offset[1] : 0) + center[1];
     const vs = [];
     for (let i = 0; i < V.length; i += np) vs.push(`<vertex x="${(V[i] + dx).toFixed(4)}" y="${(V[i + 1] + dy).toFixed(4)}" z="${V[i + 2].toFixed(4)}"/>`);
     const ts = [];
     for (let i = 0; i < T.length; i += 3) ts.push(`<triangle v1="${T[i]}" v2="${T[i + 1]}" v3="${T[i + 2]}"/>`);
-    res += `<object id="${id}" name="${ob.name}" type="model"><mesh><vertices>${vs.join('')}</vertices><triangles>${ts.join('')}</triangles></mesh></object>`;
+    res += `<object id="${id}" name="${xmlAttr(ob.name)}" type="model"><mesh><vertices>${vs.join('')}</vertices><triangles>${ts.join('')}</triangles></mesh></object>`;
     items += `<item objectid="${id}"/>`;
+    const meta = Object.entries({ name: ob.name, ...(ob.settings || {}) })
+      .map(([k, v]) => `\n    <metadata key="${k}" value="${xmlAttr(v)}"/>`).join('');
+    cfg += `\n  <object id="${id}">${meta}\n    <part id="${id}" subtype="normal_part">\n      <metadata key="name" value="${xmlAttr(ob.name)}"/>\n      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>\n    </part>\n  </object>`;
   });
   const model = `<?xml version="1.0" encoding="UTF-8"?>
-<model unit="millimeter" xml:lang="it-IT" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><resources>${res}</resources><build>${items}</build></model>`;
+<model unit="millimeter" xml:lang="it-IT" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><metadata name="Application">StampRoller</metadata>${title ? `<metadata name="Title">${xmlAttr(title)}</metadata>` : ''}<resources>${res}</resources><build>${items}</build></model>`;
+  const modelSettings = `<?xml version="1.0" encoding="UTF-8"?>\n<config>${cfg}\n</config>\n`;
   const ct = `<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>`;
   const rels = `<?xml version="1.0" encoding="UTF-8"?>
@@ -46,6 +55,7 @@ export function to3MF(objects) {
     ['[Content_Types].xml', enc.encode(ct)],
     ['_rels/.rels', enc.encode(rels)],
     ['3D/3dmodel.model', enc.encode(model)],
+    ['Metadata/model_settings.config', enc.encode(modelSettings)],
   ]);
 }
 

@@ -116,10 +116,18 @@
       <h2>Scarica</h2>
       <div class="dl">
         <button id="dl3mf" type="button" class="primary" disabled>Kit completo (.3mf)</button>
+        <button id="dl3mfTpu" type="button" class="primary" hidden>Battistrada TPU (.3mf)</button>
       </div>
+      <p class="hint">I file .3mf contengono pareti, riempimento e altezza layer di ogni pezzo: Bambu Studio (e OrcaSlicer) li applicano da soli, a te resta da scegliere stampante e filamento. Il battistrada TPU ha un file suo, così va su un piatto a parte.</p>
       <p class="hint">Oppure i singoli pezzi in STL:</p>
       <div id="dlParts" class="dl"></div>
       <dl id="info" class="info"></dl>
+    </section>
+
+    <section>
+      <h2>Impostazioni consigliate</h2>
+      <table id="settings" class="settings"></table>
+      <p class="hint">Per tutti: niente supporti. Gli stessi valori sono già nei .3mf; con altri slicer (Cura, PrusaSlicer) impostali a mano.</p>
     </section>
 
     <section>
