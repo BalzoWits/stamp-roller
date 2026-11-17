@@ -318,15 +318,21 @@ export function buildAll(wasm, font, params) {
   const arm = Manifold.hull([baseSeg, cylX(K.armT, K.armR, x0, zc)]);
   // sede piana per testa e scatto del perno sulla faccia esterna inclinata
   const spot = cylX(Rj, Math.max(AX.headR, AX.d) + 0.7, xOut, zc);
-  // rondelle: col 608 arrivano fino all'anello interno (lo serrano senza toccare l'esterno),
-  // senza cuscinetto sono un velo contro la faccia del rullo
-  const bossIn = bearing ? BRG.w / 2 + 0.15 : x0 - K.boss;
-  const bossR = bearing ? BRG.land : K.bossR;
   handle = handle
     .add(arm.subtract(spot))
-    .add(arm.subtract(spot).mirror([1, 0, 0]))
-    .add(cylX(x0 - bossIn + 0.1, bossR, bossIn, zc))
-    .add(cylX(x0 - bossIn + 0.1, bossR, -x0 - 0.1, zc));
+    .add(arm.subtract(spot).mirror([1, 0, 0]));
+  // Senza cuscinetto: rondella sottile sul braccio contro la faccia del rullo.
+  // Col 608 NIENTE sporgenze fisse (impedirebbero di calare il rullo tra i bracci): due distanziali
+  // stampati a parte, infilati nei fori laterali del mozzo, vanno dal braccio all'anello interno.
+  if (!bearing) {
+    handle = handle
+      .add(cylX(K.boss + 0.1, K.bossR, x0 - K.boss, zc))
+      .add(cylX(K.boss + 0.1, K.bossR, -x0 - 0.1, zc));
+  }
+  const spacerL = x0 - BRG.w / 2 - 0.2;          // sporge dal rullo meno del gioco braccio-rullo
+  const spacer = bearing
+    ? cyl(spacerL, BRG.land).subtract(cyl(spacerL + 2, AX.r + 0.25).translate([0, 0, -1]))
+    : null;
 
   // cavità della testa: filetto femmina + smusso a 45° (stampabile senza supporti) + foro + cono + feritoia
   const femTop = zh + Lt + 1;
@@ -404,6 +410,19 @@ export function buildAll(wasm, font, params) {
   if (useScrew) asm.bolt = bolt.translate([0, 0, zc]);
   else { asm.pin = pin.translate([0, 0, zc]); print.pin = onBed(pin); }
   if (bearingGhost) asm.bearing = bearingGhost.translate([0, 0, zc]);
+  if (spacer) {
+    // in posizione: dall'anello interno (±w/2 + 0,1) verso i bracci
+    const sx = spacer.rotate([0, 90, 0]);
+    asm.spacers = Manifold.union([
+      sx.translate([BRG.w / 2 + 0.1, 0, zc]),
+      sx.mirror([1, 0, 0]).translate([-(BRG.w / 2 + 0.1), 0, zc]),
+    ]);
+    // stampa: due tubetti in piedi, uno accanto all'altro
+    print.spacers = onBed(Manifold.union([
+      spacer.translate([-(BRG.land + 2), 0, 0]),
+      spacer.translate([BRG.land + 2, 0, 0]),
+    ]));
+  }
   for (const [k, m] of Object.entries(rollerParts)) {
     asm[k] = m.translate([0, 0, zc]);
     print[k] = onBed(m.rotate([0, -90, 0])); // asse in verticale, bordino del mozzo sul piatto

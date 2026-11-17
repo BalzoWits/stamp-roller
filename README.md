@@ -35,8 +35,9 @@ la sporgenza oltre il collarino (C) serve solo a controllare che il collarino no
 Il foro del corpo ha 1 mm di gioco sul diametro, la feritoia 0,4 mm per lato. Misure reali: Posca PC-17K da 15 mm
 ha il blocchetto della punta 16,5 × 9,7 (misurato), corpo ~28, lunghezza ~157 (dal web, da verificare).
 
-Opzioni rullo: **cuscinetto 608** (sede Ø22,2 centrata, rondelle dei bracci che premono solo l'anello interno,
-asse da 8 mm, rullo minimo Ø 32 circa) e **asse** a perno stampato a scatto oppure vite M8 (M5 senza 608) + dado.
+Opzioni rullo: **cuscinetto 608** (sede Ø22,2 centrata, asse da 8 mm, rullo minimo Ø 32 circa; due
+**distanziali** stampati a parte vanno dai bracci all'anello interno: fissi sui bracci impedirebbero di calare il
+rullo, il test lo verifica facendolo scendere dall'alto) e **asse** a perno stampato a scatto oppure vite M8 (M5 senza 608) + dado.
 
 ## Impostazioni di stampa nel 3MF
 

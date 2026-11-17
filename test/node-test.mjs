@@ -8,6 +8,7 @@ import { PRINT, bambuObjectSettings } from '../print-settings.js';
 
 const wasm = await Module();
 wasm.setup();
+const { Manifold } = wasm;
 const fontFile = process.argv[2] || 'fonts/black-ops-one.woff';
 const buf = readFileSync(new URL('../' + fontFile, import.meta.url));
 const font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
@@ -46,6 +47,13 @@ for (const c of cases) {
       coll[k] = +v.toFixed(2);
       if (!EXPECTED.has(k) && !EXPECTED.has(`${keys[j]}^${keys[i]}`)) failed = true;
     }
+  }
+  // montaggio: il gruppo rullo (mozzo/battistrada/rullo + cuscinetto + distanziali) deve poter
+  // scendere dall'alto tra i bracci senza urtare la testa
+  const group = Manifold.union(['hub', 'tire', 'roller', 'bearing', 'spacers'].filter((k) => A[k]).map((k) => A[k]));
+  for (let dz = 2; dz <= 40; dz += 2) {
+    const v = A.head.intersect(group.translate([0, 0, dz])).volume();
+    if (v > 0.01) { console.log(` MONTAGGIO: il rullo urta la testa salendo di ${dz} mm (${v.toFixed(1)} mm3)`); failed = true; break; }
   }
   const bb = (m) => { const b = m.boundingBox(); return b.min.map((v, i) => (b.max[i] - v).toFixed(1)).join(' x '); };
   console.log(`\n[${c.name}] ${ms} ms`);

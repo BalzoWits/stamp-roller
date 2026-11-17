@@ -103,6 +103,7 @@ const MAT = {
   tire: new THREE.MeshStandardMaterial({ color: '#f5a524', roughness: 0.8, flatShading: true }),
   hub: new THREE.MeshStandardMaterial({ color: '#cfd2d6', roughness: 0.5, flatShading: true }),
   pin: new THREE.MeshStandardMaterial({ color: '#e9e6dd', roughness: 0.6, flatShading: true }),
+  spacers: new THREE.MeshStandardMaterial({ color: '#e9e6dd', roughness: 0.6, flatShading: true }),
   bolt: new THREE.MeshStandardMaterial({ color: '#b8bcc4', roughness: 0.3, metalness: 0.8, flatShading: true }),
   bearing: new THREE.MeshStandardMaterial({ color: '#c9ced6', roughness: 0.25, metalness: 0.9, flatShading: true }),
   ghost: new THREE.MeshStandardMaterial({ color: '#9fd3ff', roughness: 0.3, transparent: true, opacity: 0.22, depthWrite: false }),
@@ -130,6 +131,7 @@ const PARTS = {
   head: { label: 'Testa', file: 'testa', mat: 'PLA/PETG' },
   sleeve: { label: 'Impugnatura', file: 'impugnatura', mat: 'PLA/PETG' },
   pin: { label: 'Perno', file: 'perno', mat: 'PLA/PETG' },
+  spacers: { label: 'Distanziali ×2', file: 'distanziali', mat: 'PLA/PETG' },
   hub: { label: 'Mozzo', file: 'mozzo', mat: 'PLA/PETG' },
   tire: { label: 'Battistrada', file: 'battistrada-TPU', mat: 'TPU' },
   roller: { label: 'Rullo', file: 'rullo', mat: 'PLA/PETG' },
@@ -138,7 +140,7 @@ const SPINNING = ['hub', 'tire', 'roller'];
 
 // Pezzi in fila sul piatto, centrati: x calcolato dagli ingombri reali.
 function printLayout(print) {
-  const order = ['pin', 'sleeve', 'head', 'hub', 'tire', 'roller'].filter((k) => print[k]);
+  const order = ['pin', 'spacers', 'sleeve', 'head', 'hub', 'tire', 'roller'].filter((k) => print[k]);
   const span = (m) => { let a = Infinity, b = -Infinity; const V = m.vertProperties; for (let i = 0; i < V.length; i += 3) { if (V[i] < a) a = V[i]; if (V[i] > b) b = V[i]; } return [a, b]; };
   const spans = order.map((k) => span(print[k]));
   const gap = 8;
