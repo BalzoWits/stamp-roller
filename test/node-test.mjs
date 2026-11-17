@@ -19,8 +19,12 @@ const cases = [
   { name: 'lungo', p: { text: 'YOUTUBE.COM/@QUALCOSA LUNGO' } },
   { name: 'fisso', p: { diameterMode: 'fixed', rollerD: 40, text: 'SINFO' } },
   { name: 'marker-stretto', p: { bodyD: 22, markerLen: 125, neckD: 17 } },
-  { name: 'punta-20', p: { tipW: 20, tipT: 6, bodyD: 33, markerLen: 145, neckD: 25, text: 'GRAFFITI', textH: 14 } },
-  { name: 'punta-20-stretto', p: { tipW: 20, tipT: 6, bodyD: 26, neckD: 22 } },
+  { name: 'punta-20', p: { tipNominal: 20, tipW: 21.5, tipT: 11, bodyD: 33, markerLen: 165, neckD: 25, text: 'GRAFFITI', textH: 14 } },
+  { name: 'punta-20-stretto', p: { tipNominal: 20, tipW: 21.5, tipT: 11, bodyD: 28, neckD: 22 } },
+  { name: 'senza-608', p: { bearing: false } },
+  { name: 'vite-608', p: { axle: 'screw' } },
+  { name: 'vite-senza-608-unico', p: { axle: 'screw', bearing: false, split: false } },
+  { name: 'punta-corta', p: { tipLen: 5 } },
 ];
 
 // coppie che devono toccarsi per progetto (non sono errori)

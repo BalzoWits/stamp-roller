@@ -55,6 +55,12 @@
       <p class="hint">In automatico il diametro si adatta al testo: se la scritta è corta viene ripetuta, se è troppo lunga viene rimpicciolita.</p>
       <label class="chk opt"><input id="split" type="checkbox" checked> Rullo in due pezzi: mozzo rigido + battistrada in TPU</label>
       <p class="hint">Il battistrada morbido prende meglio la vernice e si adatta alle superfici irregolari. Si infila a pressione sul mozzo, i denti lo tengono fermo. Si può cambiare scritta ristampando solo il battistrada.</p>
+      <label class="chk opt"><input id="bearing" type="checkbox" checked> Cuscinetto 608 nel rullo (22×8×7, quello degli skateboard)</label>
+      <p class="hint">Il rullo gira molto più libero. Asse da 8 mm; il rullo minimo diventa Ø 32 circa.</p>
+      <div class="seg" role="radiogroup" aria-label="Asse">
+        <label><input type="radio" name="axle" value="pin" checked> Perno stampato</label>
+        <label><input type="radio" name="axle" value="screw"> Vite e dado</label>
+      </div>
     </section>
 
     <section>
@@ -79,37 +85,38 @@
       </label>
       <div class="row">
         <label>A · Ø massimo <span class="unit">mm</span>
-          <input id="bodyD" type="number" min="15" max="45" step="0.1" value="30">
+          <input id="bodyD" type="number" min="15" max="45" step="0.1" value="29">
         </label>
         <label>B · Lunghezza <span class="unit">mm</span>
-          <input id="markerLen" type="number" min="80" max="220" step="0.5" value="140">
+          <input id="markerLen" type="number" min="80" max="220" step="0.5" value="158">
         </label>
       </div>
+      <div class="row">
+        <label>Larghezza reale punta <span class="unit">mm</span>
+          <input id="tipW" type="number" min="10" max="25" step="0.1" value="16.5">
+        </label>
+        <label>Spessore reale punta <span class="unit">mm</span>
+          <input id="tipT" type="number" min="2" max="14" step="0.1" value="9.7">
+        </label>
+      </div>
+      <p class="hint">Misura il blocchetto della punta col calibro: è più grande del "15 mm" scritto sul marker (la Posca da 15 è 16,5 × 9,7). La feritoia aggiunge già 0,4 mm per lato.</p>
       <details>
         <summary>Misure avanzate</summary>
         <div class="row">
           <label>C · Sporgenza punta <span class="unit">mm</span>
-            <input id="tipLen" type="number" min="5" max="30" step="0.5" value="12">
+            <input id="tipLen" type="number" min="3" max="30" step="0.5" value="10">
           </label>
           <label>Ø ultimo collarino <span class="unit">mm</span>
             <input id="neckD" type="number" min="15" max="30" step="0.5" value="20">
           </label>
         </div>
-        <div class="row">
-          <label>Larghezza punta <span class="unit">mm</span>
-            <input id="tipW" type="number" min="10" max="22" step="0.1" value="15">
-          </label>
-          <label>Spessore punta <span class="unit">mm</span>
-            <input id="tipT" type="number" min="2" max="9" step="0.1" value="5">
-          </label>
-        </div>
-        <p class="hint">La sporgenza è quanto esce la punta oltre l'ultimo collarino del marker: è la parte che passa nella feritoia.</p>
+        <p class="hint">La sporgenza serve solo come controllo: se è meno di 6 mm il collarino tocca la piastra prima che la punta arrivi al rullo.</p>
       </details>
       <div class="row tight">
         <button id="savePreset" type="button" class="ghost">Salva come preset</button>
         <button id="delPreset" type="button" class="ghost">Elimina preset</button>
       </div>
-      <p class="hint">Il filetto tra testa e impugnatura recupera ±7 mm di errore sulla lunghezza: basta una misura col righello.</p>
+      <p class="hint">La lunghezza decide dove arriva la punta: l'impugnatura spinge il marker dal fondo finché tocca il rullo. Il filetto recupera ±7 mm, quindi basta il righello. Il foro del corpo ha 1 mm di gioco sul diametro: il marker scorre libero mentre avviti.</p>
     </section>
 
     <section>
@@ -137,7 +144,8 @@
         <li>PLA o PETG, layer da 0,2 mm, 3–4 perimetri. Il perno al 100% di riempimento.</li>
         <li><b>Battistrada in TPU</b> (95A), in piedi, lento (20–30 mm/s), layer da 0,12–0,16 mm per lettere nitide.</li>
         <li>Infila il battistrada sul mozzo dal lato senza bordino, allineando i denti, fino in battuta.</li>
-        <li>Metti il rullo tra i bracci e spingi il <b>perno</b> dal lato della testa finché lo scatto passa dall'altra parte. Il rullo deve girare libero.</li>
+        <li>Con il <b>608</b>: premilo nella sede del mozzo dal lato senza bordino fino in battuta (se è duro, usa una morsa con due rondelle).</li>
+        <li>Metti il rullo tra i bracci e spingi il <b>perno</b> dal lato della testa finché lo scatto passa dall'altra parte, oppure infila la <b>vite</b> e chiudi col dado autobloccante senza schiacciare i bracci. Il rullo deve girare libero.</li>
         <li>Carica il marker (pompa la punta), infilalo nella testa con la punta nella feritoia, poi avvita l'impugnatura finché la punta sfiora il rullo.</li>
         <li>Se il rullo si impregna troppo, svita l'impugnatura di mezzo giro. Per cambiare marker la sviti del tutto: il marker resta fuori quasi per intero e si sfila a mano.</li>
       </ol>

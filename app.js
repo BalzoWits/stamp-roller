@@ -33,17 +33,19 @@ const store = {
 };
 
 const NUM = ['textH', 'gap', 'rollerD', 'relief', 'bodyD', 'markerLen', 'tipLen', 'neckD', 'tipW', 'tipT'];
-const MARKER_KEYS = ['bodyD', 'markerLen', 'tipLen', 'neckD', 'tipW', 'tipT'];
-// Le due punte più comuni: la larghezza decide feritoia, rullo e forcella. Spessori da verificare.
-const TIPS = { 15: { tipW: 15, tipT: 5 }, 20: { tipW: 20, tipT: 6 } };
+const MARKER_KEYS = ['bodyD', 'markerLen', 'tipLen', 'neckD', 'tipW', 'tipT', 'tipNominal'];
+// Le due misure nominali più comuni. Il blocchetto reale è più grande del nominale: la Posca da 15
+// misurata è 16,5 × 9,7; quello da 20 è una stima proporzionale, da verificare.
+const TIPS = { 15: { tipNominal: 15, tipW: 16.5, tipT: 9.7 }, 20: { tipNominal: 20, tipW: 21.5, tipT: 11 } };
 const BUILTIN_PRESETS = [
   { name: 'Generico 15 mm (valori di partenza)', builtin: true, ...pick(DEFAULTS, MARKER_KEYS) },
   { name: 'Generico 20 mm (valori di partenza)', builtin: true, ...pick(DEFAULTS, MARKER_KEYS), ...TIPS[20], neckD: 24 },
+  { name: 'Uni Posca PC-17K 15 mm (punta misurata, corpo da verificare)', builtin: true, ...pick(DEFAULTS, MARKER_KEYS), bodyD: 28, markerLen: 157, ...TIPS[15] },
 ];
 
-function syncTipRadio() {
-  const v = parseFloat($('tipW').value) >= 17.5 ? '20' : '15';
-  document.querySelector(`input[name=tipSize][value="${v}"]`).checked = true;
+function syncTipRadio(v) {
+  const r = document.querySelector(`input[name=tipSize][value="${v}"]`);
+  if (r) r.checked = true;
 }
 
 function pick(o, keys) { return Object.fromEntries(keys.map((k) => [k, o[k]])); }
@@ -53,6 +55,9 @@ function readParams() {
   for (const k of NUM) p[k] = parseFloat($(k).value) || DEFAULTS[k];
   p.diameterMode = document.querySelector('input[name=diameterMode]:checked').value;
   p.split = $('split').checked;
+  p.bearing = $('bearing').checked;
+  p.axle = document.querySelector('input[name=axle]:checked').value;
+  p.tipNominal = parseFloat(document.querySelector('input[name=tipSize]:checked').value);
   p.fontId = $('font').value;
   return p;
 }
@@ -62,7 +67,9 @@ function writeParams(p) {
   for (const k of NUM) if (p[k] != null) $(k).value = p[k];
   if (p.diameterMode) document.querySelector(`input[name=diameterMode][value=${p.diameterMode}]`).checked = true;
   if (p.split != null) $('split').checked = p.split;
-  syncTipRadio();
+  if (p.bearing != null) $('bearing').checked = p.bearing;
+  if (p.axle) document.querySelector(`input[name=axle][value=${p.axle}]`).checked = true;
+  if (p.tipNominal) syncTipRadio(p.tipNominal);
   if (p.fontId && [...$('font').options].some((o) => o.value === p.fontId)) $('font').value = p.fontId;
 }
 
@@ -96,6 +103,8 @@ const MAT = {
   tire: new THREE.MeshStandardMaterial({ color: '#f5a524', roughness: 0.8, flatShading: true }),
   hub: new THREE.MeshStandardMaterial({ color: '#cfd2d6', roughness: 0.5, flatShading: true }),
   pin: new THREE.MeshStandardMaterial({ color: '#e9e6dd', roughness: 0.6, flatShading: true }),
+  bolt: new THREE.MeshStandardMaterial({ color: '#b8bcc4', roughness: 0.3, metalness: 0.8, flatShading: true }),
+  bearing: new THREE.MeshStandardMaterial({ color: '#c9ced6', roughness: 0.25, metalness: 0.9, flatShading: true }),
   ghost: new THREE.MeshStandardMaterial({ color: '#9fd3ff', roughness: 0.3, transparent: true, opacity: 0.22, depthWrite: false }),
 };
 const groups = { assembly: new THREE.Group(), print: new THREE.Group() };
@@ -282,7 +291,7 @@ function requestBuild() {
 
 async function doBuild() {
   const p = readParams();
-  store.set('params', p);
+  store.set('params2', p); // v2: misure punta corrette, le vecchie (15×5) non vanno ricaricate
   $('rollerD').disabled = p.diameterMode !== 'fixed';
   const id = ++reqId;
   let entry;
@@ -324,6 +333,7 @@ function renderInfo(i) {
     ['Testo', i.repeats ? `${i.textWidth.toFixed(0)} × ${i.textHeight.toFixed(1)} mm${i.textScale < 0.999 ? ` (scala ${Math.round(i.textScale * 100)}%)` : ''}` : '—'],
     ['Corpo', `${i.handleLength.toFixed(0)} mm, Ø ${i.handleOuterD.toFixed(1)} (ghiera Ø ${i.ringD.toFixed(1)})`],
     ['Regolazione', `±${i.adjust} mm avvitando l'impugnatura`],
+    ['Cuscinetto', i.bearingTxt],
     ['Asse', i.pin],
     ['Materiali', i.split ? 'battistrada in TPU, il resto PLA/PETG' : 'tutto PLA/PETG'],
   ];
@@ -378,13 +388,12 @@ function renderSettings(print) {
 // ------------------------------------------------------------------ eventi
 $('font').innerHTML = FONTS.map((f) => `<option value="${f.id}">${f.name}</option>`).join('');
 let presets = fillPresets();
-writeParams({ ...DEFAULTS, ...store.get('params', {}), fontId: (store.get('params', {}).fontId === 'custom' ? FONTS[0].id : store.get('params', {}).fontId) });
+writeParams({ ...DEFAULTS, ...store.get('params2', {}), fontId: (store.get('params2', {}).fontId === 'custom' ? FONTS[0].id : store.get('params2', {}).fontId) });
 
 for (const el of document.querySelectorAll('.panel input:not([type=file]), .panel select:not(#preset)')) {
   el.addEventListener('input', () => {
     if (el.name === 'tipSize') writeParams(TIPS[el.value]);
     if (MARKER_KEYS.includes(el.id) || el.name === 'tipSize') $('preset').value = '';
-    if (el.id === 'tipW') syncTipRadio();
     requestBuild();
   });
 }

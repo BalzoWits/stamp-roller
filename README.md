@@ -27,6 +27,17 @@ Tutto gira nel browser: nessun server, si pubblica su GitHub Pages così com'è.
 Pezzi stampabili senza supporti: testa in piedi (bracci in alto), impugnatura col fondo sul piatto,
 mozzo col bordino sul piatto, battistrada in piedi, perno sdraiato. Nessuna viteria.
 
+## Posizione della punta (rev. 17/11/2026)
+
+Niente battuta davanti: l'impugnatura spinge il marker dal fondo finché la punta tocca il rullo, quindi conta
+la **lunghezza totale** (B). La punta sporge 3 mm oltre la piastra in posizione nominale e il filetto regola ±7 mm;
+la sporgenza oltre il collarino (C) serve solo a controllare che il collarino non tocchi la piastra (≥ 6 mm).
+Il foro del corpo ha 1 mm di gioco sul diametro, la feritoia 0,4 mm per lato. Misure reali: Posca PC-17K da 15 mm
+ha il blocchetto della punta 16,5 × 9,7 (misurato), corpo ~28, lunghezza ~157 (dal web, da verificare).
+
+Opzioni rullo: **cuscinetto 608** (sede Ø22,2 centrata, rondelle dei bracci che premono solo l'anello interno,
+asse da 8 mm, rullo minimo Ø 32 circa) e **asse** a perno stampato a scatto oppure vite M8 (M5 senza 608) + dado.
+
 ## Impostazioni di stampa nel 3MF
 
 I .3mf scaricati contengono `Metadata/model_settings.config` (formato Bambu Studio / OrcaSlicer) con pareti,

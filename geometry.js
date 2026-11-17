@@ -7,11 +7,14 @@ const TAU = Math.PI * 2;
 
 export const DEFAULTS = {
   // marker
-  bodyD: 30,        // diametro massimo del corpo
-  markerLen: 140,   // lunghezza da punta a fondo
-  tipLen: 12,       // quanto sporge la punta oltre l'ultimo collarino
-  tipW: 15,         // larghezza punta
-  tipT: 5,          // spessore punta
+  // (Posca PC-17K: ~157 mm, corpo ~28; Molotow 627HS: corpo 29, ~161 mm vuoto. Punta Posca 15 mm
+  // misurata dall'utente: 16,5 × 9,7 — "15 mm" è la larghezza del segno, non del blocchetto.)
+  bodyD: 29,        // diametro massimo del corpo
+  markerLen: 158,   // lunghezza da punta a fondo: è LEI che decide dove arriva la punta
+  tipLen: 10,       // sporgenza della punta oltre l'ultimo collarino (solo controllo)
+  tipNominal: 15,   // larghezza nominale del marker (15 o 20): decide la larghezza del rullo
+  tipW: 16.5,       // larghezza reale del blocchetto della punta
+  tipT: 9.7,        // spessore reale del blocchetto della punta
   neckD: 20,        // diametro dell'ultimo collarino (sotto la punta)
   // timbro
   text: 'CIAO',
@@ -22,14 +25,34 @@ export const DEFAULTS = {
   rollerD: 36,      // diametro esterno (solo in modalità fixed)
   minStroke: 0.8,   // tratto minimo stampabile
   split: true,      // rullo in due pezzi: mozzo rigido + battistrada TPU
+  bearing: true,    // cuscinetto 608 (22×8×7) nel rullo, asse da 8 mm
+  axle: 'pin',      // 'pin' = perno stampato a scatto | 'screw' = vite M8 (con 608) o M5 + dado
 };
+
+// Asse: con il 608 è da 8 mm, senza da 5 mm. Misure del perno stampato scalate sul diametro.
+function axleCfg(d) {
+  const big = d >= 8;
+  return {
+    d, r: d / 2,
+    hole: d / 2 + 0.2,              // foro nei bracci
+    bore: d / 2 + 0.3,              // foro nel rullo senza cuscinetto (gira sul perno)
+    headR: d / 2 + (big ? 3.5 : 2),
+    headT: big ? 2.4 : 1.6,
+    lip: big ? 0.6 : 0.45,          // dente dello scatto
+    lipL: big ? 2.2 : 1.6,
+    slot: big ? 1.8 : 1.3,          // taglio tra le linguette
+    flat: d / 2 * 0.9,              // piatti per stamparlo sdraiato
+    nutH: big ? 8 : 5,              // dado autobloccante
+  };
+}
+const BRG = { R: 11, fitR: 11.1, w: 7, land: 5.8, side: 7 }; // 608: sede Ø22,2, appoggio solo sull'anello interno
 
 // Costanti di progetto (non esposte nel sito)
 const K = {
-  boreClr: 0.25,   // gioco radiale del foro sul corpo
+  boreClr: 0.5,    // gioco radiale del foro sul corpo (+1 mm sul Ø: il marker scorre avvitando)
   wall: 3.6,       // parete di impugnatura e corpo della testa
   plateT: 2,       // spessore della piastra con la feritoia
-  slotClr: 0.3,    // gioco della feritoia per lato
+  slotClr: 0.4,    // gioco della feritoia per lato
   threadLen: 21,   // lunghezza filetto (3 spire)
   threadEng: 14,   // impegno nominale testa/impugnatura (il resto è regolazione)
   thrDepth: 2,     // profondità del filetto tondo
@@ -39,17 +62,10 @@ const K = {
   floor: 2,        // fondo chiuso dell'impugnatura
   armT: 4.5,       // spessore bracci forcella
   armGap: 0.8,     // distanza braccio-rullo
-  boss: 0.5,       // rondella integrata sul braccio
-  armR: 7.5,       // raggio della testa del braccio attorno all'asse
-  bossR: 4.5,      // raggio della rondella integrata
-  pinR: 2.5,       // perno stampato Ø5
-  pinFlat: 2.25,   // piatti del perno (stampa sdraiato): mezza altezza
-  axleHole: 2.65,  // raggio foro perno nei bracci
-  rollerBore: 2.8, // raggio foro nel rullo (gira libero sul perno)
-  pinHeadR: 4.5,
-  pinHeadT: 1.6,
-  pinLip: 0.45,    // dente dello scatto
-  pinSlot: 1.3,    // taglio tra le due linguette
+  boss: 0.5,       // rondella integrata sul braccio (senza cuscinetto)
+  armR: 8,         // raggio della testa del braccio attorno all'asse
+  bossR: 4.5,      // raggio della rondella integrata (senza cuscinetto)
+  tipStick: 3,     // quanto sporge la punta oltre la piastra in posizione nominale
   tireWall: 2.2,   // spessore del battistrada TPU sotto le lettere
   hubFlange: 1,    // bordino di battuta del mozzo
   teeth: 8,        // denti anti-rotazione mozzo/battistrada
@@ -99,19 +115,20 @@ function textCross(CrossSection, font, text, size) {
 }
 
 // Calcola raggio, numero di ripetizioni e scala del testo sul rullo.
-export function layoutText(textW, gap, mode, rollerD) {
+export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin) {
   const unit = textW + gap;
   let scale = 1, n = 1, Ro;
   if (mode === 'fixed') {
-    Ro = Math.min(Math.max(rollerD / 2, K.rMin), K.rMax);
+    Ro = Math.min(Math.max(rollerD / 2, rMin), K.rMax);
     const C = TAU * Ro;
     n = Math.floor(C / unit);
     if (n < 1) { n = 1; scale = (C - gap) / textW; }
   } else {
     Ro = unit / TAU;
-    if (Ro < K.rMin) {
-      n = Math.ceil((TAU * K.rMin) / unit);
-      Ro = (n * unit) / TAU;
+    if (Ro < rMin) {
+      // rullo al minimo: quante ripetizioni ci stanno, gli spazi si allargano per chiudere il giro
+      Ro = rMin;
+      n = Math.max(1, Math.floor((TAU * rMin) / unit));
     } else if (Ro > K.rMax) {
       Ro = K.rMax;
       scale = (TAU * Ro - gap) / textW;
@@ -135,9 +152,16 @@ export function buildAll(wasm, font, params) {
   if (p.neckD / 2 + 0.5 > p.bodyD / 2 + K.boreClr - 0.5) warnings.push('Il collarino non può essere più largo del corpo: uso il massimo possibile.');
 
   // ---------------------------------------------------------------- testo e rullo
-  const W = p.tipW + 3;   // rullo largo quanto la punta + 1,5 mm per lato
-  if (p.tipW < 10 || p.tipW > 22) warnings.push(`Larghezza punta ${p.tipW} mm fuori dal campo previsto (10–22).`);
+  // rullo: largo quanto il marker nominale + 3, e comunque almeno il blocchetto reale + 1,5
+  const W = Math.max(p.tipNominal + 3, p.tipW + 1.5);
+  if (p.tipW < 10 || p.tipW > 25) warnings.push(`Larghezza punta ${p.tipW} mm fuori dal campo previsto (10–25).`);
   const split = !!p.split;
+  const bearing = !!p.bearing;
+  const AX = axleCfg(bearing ? 8 : 5);
+  // raggio minimo: con il 608 il mozzo deve contenere la sede Ø22 più una parete
+  const rMinEff = bearing
+    ? Math.max(K.rMin, BRG.fitR + 1.6 + (split ? K.tireWall : 0) + p.relief)
+    : K.rMin;
   const fl = split ? K.hubFlange : 0;     // il bordino del mozzo ruba larghezza al battistrada
   const txt = (p.text || '').trim();
   let textInfo = { n: 0, scale: 1, textW: 0 };
@@ -160,7 +184,7 @@ export function buildAll(wasm, font, params) {
     cs = cs.translate([-b.min[0], -(b.min[1] + b.max[1]) / 2]).scale([hScale, hScale]);
     bw *= hScale; bh *= hScale;
 
-    const L = layoutText(bw, p.gap, p.diameterMode, p.rollerD);
+    const L = layoutText(bw, p.gap, p.diameterMode, p.rollerD, rMinEff);
     if (L.scale < 1) {
       cs = cs.scale([L.scale, L.scale]);
       warnings.push(`Testo troppo lungo per il diametro massimo (${2 * K.rMax} mm): ridotto al ${Math.round(L.scale * 100)}%.`);
@@ -188,14 +212,22 @@ export function buildAll(wasm, font, params) {
     });
     textInfo = { n: L.n, scale: hScale * L.scale, textW: bw, textHreal: bh, C: L.C, pitchU: L.pitchU };
   } else {
-    Ro = p.diameterMode === 'fixed' ? Math.min(Math.max(p.rollerD / 2, K.rMin), K.rMax) : K.rMin;
+    Ro = p.diameterMode === 'fixed' ? Math.min(Math.max(p.rollerD / 2, rMinEff), K.rMax) : rMinEff;
     warnings.push('Nessun testo: il rullo è liscio.');
   }
 
   const Rc = Ro - relief;
   // i pezzi del rullo si costruiscono lungo Z (x=0..W) e poi si girano sull'asse X centrato
   const toX = (m) => m.rotate([0, 90, 0]).translate([-W / 2, 0, 0]);
-  const bore = cyl(W + 2, K.rollerBore).translate([0, 0, -1]);
+  // foro del rullo: sede del 608 centrata (aperta dal lato opposto al bordino, così si stampa
+  // senza sbalzi) + foro passante più largo delle rondelle; senza cuscinetto, foro sul perno
+  const bore = bearing
+    ? Manifold.union([
+      cyl(W + 2, BRG.side).translate([0, 0, -1]),
+      cyl(W / 2 + BRG.w / 2 + 1, BRG.fitR).translate([0, 0, W / 2 - BRG.w / 2]),
+      cyl(0.6, BRG.fitR, BRG.fitR + 0.6).translate([0, 0, W - 0.59]),
+    ])
+    : cyl(W + 2, AX.bore).translate([0, 0, -1]);
   const rollerParts = {};
   if (split) {
     const Rhub = Rc - K.tireWall;
@@ -214,7 +246,7 @@ export function buildAll(wasm, font, params) {
     if (textSolid) tire = tire.add(textSolid.subtract(toX(cyl(W + 2, Rhub + K.toothH + 0.2).translate([0, 0, -1]))));
     rollerParts.hub = toX(hub);
     rollerParts.tire = tire;
-    if (Rhub - K.rollerBore < 2.5) warnings.push('Mozzo sottile: aumenta il diametro del rullo.');
+    if (!bearing && Rhub - AX.bore < 2.5) warnings.push('Mozzo sottile: aumenta il diametro del rullo.');
   } else {
     let roller = toX(cyl(W, Rc));
     if (textSolid) roller = roller.add(textSolid);
@@ -224,11 +256,16 @@ export function buildAll(wasm, font, params) {
   // ---------------------------------------------------------------- manico
   const Rb = p.bodyD / 2 + K.boreClr;
   const Rh = Rb + K.wall;
-  const neckR = Math.min(p.neckD / 2 + 0.5, Rb - 0.5);
   const plateT = K.plateT;
-  const zTip = -plateT + p.tipLen;                 // estremità della punta
+  const slotW = p.tipW + 2 * K.slotClr, slotT = p.tipT + 2 * K.slotClr;
+  // il cono interno deve finire più largo della feritoia, altrimenti la feritoia lo buca di lato
+  const neckR = Math.max(Math.min(p.neckD / 2 + 0.5, Rb - 0.5), Math.hypot(slotW / 2, slotT / 2) + 0.5);
+  // Nessuna battuta davanti: è l'impugnatura a spingere il marker dal fondo finché la punta tocca il
+  // rullo. In posizione nominale la punta sporge tipStick oltre la piastra; il filetto regola ±7 mm.
+  const zTip = K.tipStick;                         // estremità della punta
   const zConeTop = -plateT, zConeBase = zConeTop - (Rb - neckR);
-  const zb = -plateT - (p.markerLen - p.tipLen);   // fondo del marker
+  const zb = zTip - p.markerLen;                   // fondo del marker
+  const zCollar = zTip - p.tipLen;                 // ultimo collarino (solo anteprima e controllo)
   // Corpo in due pezzi: TESTA (piastra, forcella, ghiera con filetto femmina) e IMPUGNATURA
   // (tubo chiuso sul fondo con filetto maschio). Il filetto fa anche da regolazione di lunghezza.
   const P = K.pitch, Lt = K.threadLen, hT = K.thrDepth;
@@ -239,7 +276,8 @@ export function buildAll(wasm, font, params) {
   if (zs - zr < 25) warnings.push('Marker corto: l\'impugnatura viene molto bassa, controlla le misure.');
   const zc = zTip + Ro - K.contact;                // asse del rullo
 
-  if (p.tipLen <= plateT + 2) warnings.push('La punta sporge troppo poco oltre la piastra: controlla "sporgenza punta".');
+  if (zCollar > -plateT - 1) warnings.push(`La punta sporge solo ${p.tipLen} mm dal collarino: il collarino tocca la piastra prima che la punta arrivi al rullo (servono almeno ${plateT + K.tipStick + 1} mm).`);
+  if (neckR > Rb - 0.5) warnings.push('La punta è quasi larga quanto il corpo: la feritoia non lascia spazio al cono interno.');
 
   // Filetto tondo a passo largo. Una sezione "a chiocciola" r(θ) = fondo + h·(1+cos θ)/2 estrusa con
   // torsione di 360° per passo dà in ogni direzione un profilo assiale sinusoidale: creste arrotondate,
@@ -279,12 +317,16 @@ export function buildAll(wasm, font, params) {
     .extrude(1.5).translate([0, 0, -1.5]);
   const arm = Manifold.hull([baseSeg, cylX(K.armT, K.armR, x0, zc)]);
   // sede piana per testa e scatto del perno sulla faccia esterna inclinata
-  const spot = cylX(Rj, K.pinHeadR + 0.7, xOut, zc);
+  const spot = cylX(Rj, Math.max(AX.headR, AX.d) + 0.7, xOut, zc);
+  // rondelle: col 608 arrivano fino all'anello interno (lo serrano senza toccare l'esterno),
+  // senza cuscinetto sono un velo contro la faccia del rullo
+  const bossIn = bearing ? BRG.w / 2 + 0.15 : x0 - K.boss;
+  const bossR = bearing ? BRG.land : K.bossR;
   handle = handle
     .add(arm.subtract(spot))
     .add(arm.subtract(spot).mirror([1, 0, 0]))
-    .add(cylX(K.boss + 0.1, K.bossR, x0 - K.boss, zc))
-    .add(cylX(K.boss + 0.1, K.bossR, -x0 - 0.1, zc));
+    .add(cylX(x0 - bossIn + 0.1, bossR, bossIn, zc))
+    .add(cylX(x0 - bossIn + 0.1, bossR, -x0 - 0.1, zc));
 
   // cavità della testa: filetto femmina + smusso a 45° (stampabile senza supporti) + foro + cono + feritoia
   const femTop = zh + Lt + 1;
@@ -293,9 +335,9 @@ export function buildAll(wasm, font, params) {
     cyl(femMax - Rb, femMax, Rb).translate([0, 0, femTop - 0.01]),
     cyl(zConeBase - zh + 1, Rb).translate([0, 0, zh - 1]),
     cyl(zConeTop - zConeBase, Rb, neckR).translate([0, 0, zConeBase]),
-    Manifold.cube([p.tipW + 2 * K.slotClr, p.tipT + 2 * K.slotClr, plateT + 0.4], true).translate([0, 0, -plateT / 2]),
+    Manifold.cube([slotW, slotT, plateT + 0.4], true).translate([0, 0, -plateT / 2]),
   ]);
-  handle = handle.subtract(cavity).subtract(cylX(2 * xOut + 2, K.axleHole, -xOut - 1, zc));
+  handle = handle.subtract(cavity).subtract(cylX(2 * xOut + 2, AX.hole, -xOut - 1, zc));
 
   // ---------------------------------------------------------------- impugnatura
   const chamfer = cyl(Lt - 1.5, maleMax + 0.5).add(cyl(1.5, maleMax + 0.5, maleMax - 1).translate([0, 0, Lt - 1.5]));
@@ -319,34 +361,49 @@ export function buildAll(wasm, font, params) {
   const sleeveAsm = sleeve.rotate([0, 0, -(360 * shift) / P]);
 
   // ---------------------------------------------------------------- marker fantasma (solo anteprima)
+  const collarTop = Math.min(zCollar, -plateT - 0.05);
   const ghost = Manifold.union([
     cyl(zConeBase - 1 - zb, p.bodyD / 2).translate([0, 0, zb]),
-    cyl(-plateT - (zConeBase - 1), Math.min(p.neckD / 2, neckR - 0.3)).translate([0, 0, zConeBase - 1]),
-    Manifold.cube([p.tipW, p.tipT, zTip + plateT], true).translate([0, 0, (zTip - plateT) / 2]),
+    cyl(collarTop - (zConeBase - 1), Math.min(p.neckD / 2, neckR - 0.3)).translate([0, 0, zConeBase - 1]),
+    Manifold.cube([p.tipW, p.tipT, zTip - collarTop], true).translate([0, 0, (zTip + collarTop) / 2]),
   ]);
 
-  // ---------------------------------------------------------------- perno stampato
-  // Asse X, testa a -X, scatto a +X: due linguette separate da un taglio verticale che si
-  // stringono passando nel foro del braccio. Piatti sopra/sotto per stamparlo sdraiato.
-  const lipX = xOut + 0.2, lipL = 1.6;
+  // ---------------------------------------------------------------- asse
+  // Perno stampato: asse X, testa a -X, scatto a +X: due linguette separate da un taglio verticale
+  // che si stringono passando nel foro del braccio. Piatti sopra/sotto per stamparlo sdraiato.
+  const lipX = xOut + 0.2;
   let pin = Manifold.union([
-    cylX(K.pinHeadT, K.pinHeadR, -xOut - K.pinHeadT, 0),
-    cylX(lipX + xOut + 0.01, K.pinR, -xOut - 0.01, 0),
-    cyl(lipL, K.pinR + K.pinLip, K.pinR - 0.4).rotate([0, 90, 0]).translate([lipX, 0, 0]),
+    cylX(AX.headT, AX.headR, -xOut - AX.headT, 0),
+    cylX(lipX + xOut + 0.01, AX.r, -xOut - 0.01, 0),
+    cyl(AX.lipL, AX.r + AX.lip, AX.r - 0.4).rotate([0, 90, 0]).translate([lipX, 0, 0]),
   ]);
   const slotFrom = xOut - K.armT - 2;
   pin = pin
-    .subtract(Manifold.cube([lipX + lipL - slotFrom + 1, K.pinSlot, 20]).translate([slotFrom, -K.pinSlot / 2, -10]))
-    .subtract(Manifold.cylinder(20, K.pinSlot / 2, K.pinSlot / 2, 24).translate([slotFrom, 0, -10])) // fondo del taglio arrotondato
-    .intersect(Manifold.cube([200, 200, 2 * K.pinFlat], true));
+    .subtract(Manifold.cube([lipX + AX.lipL - slotFrom + 1, AX.slot, 30]).translate([slotFrom, -AX.slot / 2, -15]))
+    .subtract(Manifold.cylinder(30, AX.slot / 2, AX.slot / 2, 24).translate([slotFrom, 0, -15])) // fondo del taglio arrotondato
+    .intersect(Manifold.cube([200, 200, 2 * AX.flat], true));
+  // Vite: solo anteprima (testa, gambo, dado), lunghezza arrotondata a 5 mm
+  const screwL = Math.ceil((2 * xOut + AX.nutH + 1.5) / 5) * 5;
+  const bolt = Manifold.union([
+    cylX(0.7 * AX.d, AX.d * 0.85, -xOut - 0.7 * AX.d, 0),
+    cylX(screwL, AX.r, -xOut, 0),
+    Manifold.cylinder(AX.nutH, AX.d * 0.9, AX.d * 0.9, 6).rotate([0, 90, 0]).translate([xOut, 0, 0]),
+  ]);
+  const useScrew = p.axle === 'screw';
+  const bearingGhost = bearing
+    ? cyl(BRG.w, BRG.R).subtract(cyl(BRG.w + 2, AX.r).translate([0, 0, -1])).rotate([0, 90, 0]).translate([-BRG.w / 2, 0, 0])
+    : null;
 
   // ---------------------------------------------------------------- disposizione di stampa
   const onBed = (m) => {
     const b = m.boundingBox();
     return m.translate([-(b.min[0] + b.max[0]) / 2, -(b.min[1] + b.max[1]) / 2, -b.min[2]]);
   };
-  const asm = { head: handle, sleeve: sleeveAsm, pin: pin.translate([0, 0, zc]) };
-  const print = { head: handle.translate([0, 0, -zh]), sleeve: onBed(sleeve), pin: onBed(pin) };
+  const asm = { head: handle, sleeve: sleeveAsm };
+  const print = { head: handle.translate([0, 0, -zh]), sleeve: onBed(sleeve) };
+  if (useScrew) asm.bolt = bolt.translate([0, 0, zc]);
+  else { asm.pin = pin.translate([0, 0, zc]); print.pin = onBed(pin); }
+  if (bearingGhost) asm.bearing = bearingGhost.translate([0, 0, zc]);
   for (const [k, m] of Object.entries(rollerParts)) {
     asm[k] = m.translate([0, 0, zc]);
     print[k] = onBed(m.rotate([0, -90, 0])); // asse in verticale, bordino del mozzo sul piatto
@@ -373,7 +430,9 @@ export function buildAll(wasm, font, params) {
     headLength: zc + K.armR - zh,
     adjust: Lt - K.threadEng - 0,
     adjustBack: K.threadEng - 6,
-    pin: `perno stampato Ø${2 * K.pinR} mm, a scatto`,
+    bearing,
+    pin: useScrew ? `vite M${AX.d}×${screwL} + dado autobloccante` : `perno stampato Ø${AX.d} mm, a scatto`,
+    bearingTxt: bearing ? 'cuscinetto 608 (22×8×7)' : 'nessuno',
   };
 
   return {
