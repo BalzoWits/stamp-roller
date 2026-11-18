@@ -1,3 +1,5 @@
+import { initI18n, t, isEn } from './i18n.js';
+import { TEXT, HTML, PATTERNS } from './i18n-en.js';
 import * as THREE from 'three';
 import { OrbitControls } from './lib/OrbitControls.js';
 import { parse } from './lib/opentype.module.js';
@@ -5,7 +7,11 @@ import { DEFAULTS } from './geometry.js';
 import { toSTL, to3MF } from './export.js';
 import { PRINT, bambuObjectSettings } from './print-settings.js';
 
+initI18n({ TEXT, HTML, PATTERNS });
+
 const $ = (id) => document.getElementById(id);
+// numero con un decimale: virgola in italiano, punto in inglese
+const dec = (x) => (isEn ? String(x) : String(x).replace('.', ','));
 
 // ------------------------------------------------------------------ font
 const FONTS = [
@@ -75,7 +81,7 @@ function writeParams(p) {
 
 function fillPresets(selectName) {
   const all = [...BUILTIN_PRESETS, ...store.get('presets', [])];
-  $('preset').innerHTML = '<option value="">— scegli —</option>' + all.map((p, i) => `<option value="${i}">${escapeHtml(p.name)}</option>`).join('');
+  $('preset').innerHTML = '<option value="">— scegli —</option>' + all.map((p, i) => `<option value="${i}"${p.builtin ? '' : ' translate="no"'}>${escapeHtml(p.name)}</option>`).join('');
   if (selectName) { const i = all.findIndex((p) => p.name === selectName); if (i >= 0) $('preset').value = String(i); }
   return all;
 }
@@ -322,7 +328,7 @@ function onResult({ data }, w) {
   $('dl3mf').textContent = split ? 'Pezzi rigidi PLA/PETG (.3mf)' : 'Kit completo (.3mf)';
   $('dl3mfTpu').hidden = !split;
   renderSettings(data.print);
-  setStatus(`Pronto · ${(data.ms / 1000).toFixed(1).replace('.', ',')} s`);
+  setStatus(`Pronto · ${dec((data.ms / 1000).toFixed(1))} s`);
 }
 
 function busy(on) { $('busy').classList.toggle('on', on); }
@@ -382,7 +388,7 @@ $('dl3mfTpu').onclick = () => download3MF(['tire'], `stamproller-${slug()}-batti
 function renderSettings(print) {
   const rows = Object.keys(print).map((k) => {
     const s = PRINT[k];
-    return `<tr><td>${PARTS[k].label}<small>${PARTS[k].mat} · ${s.placement}</small></td><td>${s.walls}</td><td>${s.infill}%</td><td>${String(s.layer).replace('.', ',')}</td></tr>`;
+    return `<tr><td>${PARTS[k].label}<small>${PARTS[k].mat} · ${s.placement}</small></td><td>${s.walls}</td><td>${s.infill}%</td><td>${dec(s.layer)}</td></tr>`;
   });
   $('settings').innerHTML = `<tr><th>Pezzo</th><th>Pareti</th><th>Riemp.</th><th>Layer</th></tr>${rows.join('')}`;
 }
@@ -390,7 +396,7 @@ function renderSettings(print) {
 // ------------------------------------------------------------------ eventi
 $('font').innerHTML = FONTS.map((f) => `<option value="${f.id}">${f.name}</option>`).join('');
 let presets = fillPresets();
-writeParams({ ...DEFAULTS, ...store.get('params2', {}), fontId: (store.get('params2', {}).fontId === 'custom' ? FONTS[0].id : store.get('params2', {}).fontId) });
+writeParams({ ...DEFAULTS, text: t(DEFAULTS.text), ...store.get('params2', {}), fontId: (store.get('params2', {}).fontId === 'custom' ? FONTS[0].id : store.get('params2', {}).fontId) });
 
 for (const el of document.querySelectorAll('.panel input:not([type=file]), .panel select:not(#preset)')) {
   el.addEventListener('input', () => {
@@ -404,7 +410,7 @@ $('preset').addEventListener('change', () => {
   if (pr) { writeParams(pick(pr, MARKER_KEYS)); requestBuild(); }
 });
 $('savePreset').onclick = () => {
-  const name = (prompt('Nome del preset (es. Molotow 627HS):') || '').trim();
+  const name = (prompt(t('Nome del preset (es. Molotow 627HS):')) || '').trim();
   if (!name) return;
   const user = store.get('presets', []).filter((p) => p.name !== name);
   user.push({ name, ...pick(readParams(), MARKER_KEYS) });
@@ -424,8 +430,8 @@ $('fontFile').addEventListener('change', async (e) => {
     const buf = await file.arrayBuffer();
     fontCache.set('custom', { buf, font: parse(buf) });
     let opt = $('font').querySelector('option[value=custom]');
-    if (!opt) { opt = new Option('', 'custom'); $('font').add(opt); }
-    opt.textContent = `Caricato: ${file.name}`;
+    if (!opt) { opt = new Option('', 'custom'); opt.setAttribute('translate', 'no'); $('font').add(opt); }
+    opt.textContent = `${t('Caricato:')} ${file.name}`;
     $('font').value = 'custom';
     requestBuild();
   } catch (err) { setStatus('Font non leggibile: ' + err.message, true); }
