@@ -30,6 +30,8 @@ export const TEXT = {
   'Rilievo': 'Relief',
   'In automatico il diametro si adatta al testo: se la scritta è corta viene ripetuta, se è troppo lunga viene rimpicciolita.':
     'In auto mode the diameter follows the text: short text is repeated, text that is too long is scaled down.',
+  'Il rullo non lascia mai tratti vuoti più lunghi dello spazio tra ripetizioni: dove non ci sono lettere la punta si infilerebbe nell\'incavo e bloccherebbe il rullo. Per lo stesso motivo gli spazi tra le parole vengono accorciati.':
+    'The roller never leaves blank stretches longer than the gap between repeats: where there are no letters the tip would sink into the recess and jam the roller. For the same reason, spaces between words are shortened.',
   'Rullo in due pezzi: mozzo rigido + battistrada in TPU': 'Two-piece roller: rigid hub + TPU tread',
   'Il battistrada morbido prende meglio la vernice e si adatta alle superfici irregolari. Si infila a pressione sul mozzo, i denti lo tengono fermo. Si può cambiare scritta ristampando solo il battistrada.':
     'A soft tread picks up paint better and conforms to uneven surfaces. It press-fits onto the hub and the teeth keep it from slipping. To change the lettering, reprint just the tread.',
@@ -73,8 +75,9 @@ export const TEXT = {
   'Kit completo (.3mf)': 'Full kit (.3mf)',
   'Pezzi rigidi PLA/PETG (.3mf)': 'Rigid parts PLA/PETG (.3mf)',
   'Battistrada TPU (.3mf)': 'TPU tread (.3mf)',
-  'I file .3mf contengono pareti, riempimento e altezza layer di ogni pezzo: Bambu Studio (e OrcaSlicer) li applicano da soli, a te resta da scegliere stampante e filamento. Il battistrada TPU ha un file suo, così va su un piatto a parte.':
-    'The .3mf files carry walls, infill and layer height for each part: Bambu Studio (and OrcaSlicer) apply them automatically, you just pick printer and filament. The TPU tread has its own file so it goes on a separate plate.',
+  'Tutti gli STL (.zip)': 'All STLs (.zip)',
+  'I .3mf contengono solo i pezzi già disposti sul piatto, senza impostazioni di stampa: quelle consigliate sono nella tabella qui sotto. Il battistrada TPU ha un file suo, così va su un piatto a parte. Lo .zip contiene tutti gli STL e un LEGGIMI con impostazioni e montaggio.':
+    'The .3mf files contain only the parts laid out on the bed, with no print settings: the recommended ones are in the table below. The TPU tread has its own file so it goes on a separate plate. The .zip has every STL plus a README with settings and assembly.',
   'Oppure i singoli pezzi in STL:': 'Or the individual parts as STL:',
 
   // nomi dei pezzi
@@ -108,8 +111,8 @@ export const TEXT = {
   'col bordino sul piatto': 'flange on the bed',
   'in piedi, 20–30 mm/s': 'upright, 20–30 mm/s',
   'in piedi': 'upright',
-  'Per tutti: niente supporti. Gli stessi valori sono già nei .3mf; con altri slicer (Cura, PrusaSlicer) impostali a mano.':
-    'No supports for any part. The same values are already in the .3mf files; with other slicers (Cura, PrusaSlicer) set them by hand.',
+  'Per tutti: niente supporti. I file non contengono impostazioni: impostale nello slicer (le trovi anche nel LEGGIMI dello .zip).':
+    'No supports for any part. The files carry no settings: set them in your slicer (they are also in the README inside the .zip).',
 
   // stampa e montaggio
   'Stampa e montaggio': 'Printing and assembly',
@@ -183,6 +186,10 @@ export const PATTERNS = [
   [re(`Testo troppo lungo per il diametro massimo \\(${N} mm\\): ridotto al (\\d+)%\\.`), 'Text too long for the maximum diameter ($1 mm): scaled to $2%.'],
   [re(`Tratti sottili: circa il (\\d+)% del testo è sotto ${N} mm\\. Aumenta l'altezza o usa un font più grosso\\.`),
     'Thin strokes: about $1% of the text is under $2 mm. Increase the height or use a bolder font.'],
+  [re(`La scritta viene (allargata|stretta) al (\\d+)% per chiudere il giro senza vuoti: se non ti piace cambia diametro o testo\\.`),
+    (_, w, n) => `The lettering is ${w === 'allargata' ? 'stretched' : 'squeezed'} to ${n}% to close the turn without blank stretches: if you don't like it, change the diameter or the text.`],
+  [re(`C'è un tratto di ${N} mm senza lettere: la punta può infilarcisi e bloccare il rullo\\. Riduci lo spazio tra ripetizioni o sostituisci gli spazi tra le parole con un trattino o un punto\\.`),
+    'There is a $1 mm stretch with no letters: the tip can sink into it and jam the roller. Reduce the gap between repeats or replace word spaces with a dash or a dot.'],
   [re(`La punta sporge solo ${N} mm dal collarino: il collarino tocca la piastra prima che la punta arrivi al rullo \\(servono almeno ${N} mm\\)\\.`),
     'The tip sticks out only $1 mm past the collar: the collar hits the plate before the tip reaches the roller (at least $2 mm needed).'],
 ];

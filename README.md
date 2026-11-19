@@ -39,7 +39,23 @@ Opzioni rullo: **cuscinetto 608** (sede Ø22,2 centrata, asse da 8 mm, rullo min
 **distanziali** stampati a parte vanno dai bracci all'anello interno: fissi sui bracci impedirebbero di calare il
 rullo, il test lo verifica facendolo scendere dall'alto) e **asse** a perno stampato a scatto oppure vite M8 (M5 senza 608) + dado.
 
-## Impostazioni di stampa nel 3MF
+## Niente tratti vuoti sul rullo (rev. 19/11/2026)
+
+Prova reale: con 10 mm di spazio tra le ripetizioni la punta, che tocca il rullo su tutta la larghezza, si
+rilassava nell'incavo e al giro dopo urtava la lettera successiva, bloccando il rullo. Ora:
+- lo spazio tra ripetizioni è 3 mm di default e **non viene mai allargato**: in automatico si aggiungono
+  ripetizioni (il diametro cresce), a diametro fisso la scritta si allarga/stringe in orizzontale;
+- gli spazi tra le parole sono accorciati a 1,8 mm (`WORD_SPACE`);
+- un controllo misura il vuoto più lungo (`maxInnerBlank` + spazio di ripetizione) e avvisa sopra 4 mm.
+
+## Download
+
+3MF senza impostazioni di stampa (un file per i pezzi rigidi, uno per il battistrada TPU) e uno ZIP con tutti
+gli STL più `LEGGIMI.txt` (impostazioni per pezzo, viteria, montaggio). Nomi:
+`stamproller_<testo>_<punta>mm_<n>-<pezzo>_<materiale>.stl`, con n = ordine di montaggio
+(1 testa, 2 impugnatura, 3 mozzo/rullo, 4 battistrada, 5 perno, 6 distanziali).
+
+## Impostazioni di stampa nel 3MF (non più usato dal sito)
 
 I .3mf scaricati contengono `Metadata/model_settings.config` (formato Bambu Studio / OrcaSlicer) con pareti,
 riempimento, altezza layer e supporti spenti per ogni pezzo; i valori stanno in `print-settings.js` e sono gli

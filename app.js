@@ -2,10 +2,10 @@ import { initI18n, t, isEn } from './i18n.js';
 import { TEXT, HTML, PATTERNS } from './i18n-en.js';
 import * as THREE from 'three';
 import { OrbitControls } from './lib/OrbitControls.js';
-import { parse } from './lib/opentype.module.js';
-import { DEFAULTS } from './geometry.js';
-import { toSTL, to3MF } from './export.js';
-import { PRINT, bambuObjectSettings } from './print-settings.js';
+import { parse, Path } from './lib/opentype.module.js';
+import { DEFAULTS, WORD_SPACE } from './geometry.js';
+import { toSTL, to3MF, toZip } from './export.js';
+import { PRINT } from './print-settings.js';
 
 initI18n({ TEXT, HTML, PATTERNS });
 
@@ -133,15 +133,29 @@ function clearGroup(g, keep = []) {
   for (const c of [...g.children]) if (!keep.includes(c)) { g.remove(c); c.traverse((o) => o.geometry?.dispose()); }
 }
 
+// n = numero nel nome del file (ordine di montaggio), file/fileEn = nome breve nel file
 const PARTS = {
-  head: { label: 'Testa', file: 'testa', mat: 'PLA/PETG' },
-  sleeve: { label: 'Impugnatura', file: 'impugnatura', mat: 'PLA/PETG' },
-  pin: { label: 'Perno', file: 'perno', mat: 'PLA/PETG' },
-  spacers: { label: 'Distanziali ×2', file: 'distanziali', mat: 'PLA/PETG' },
-  hub: { label: 'Mozzo', file: 'mozzo', mat: 'PLA/PETG' },
-  tire: { label: 'Battistrada', file: 'battistrada-TPU', mat: 'TPU' },
-  roller: { label: 'Rullo', file: 'rullo', mat: 'PLA/PETG' },
+  head: { n: 1, label: 'Testa', file: 'testa', fileEn: 'head', mat: 'PLA/PETG' },
+  sleeve: { n: 2, label: 'Impugnatura', file: 'impugnatura', fileEn: 'grip', mat: 'PLA/PETG' },
+  hub: { n: 3, label: 'Mozzo', file: 'mozzo', fileEn: 'hub', mat: 'PLA/PETG' },
+  roller: { n: 3, label: 'Rullo', file: 'rullo', fileEn: 'roller', mat: 'PLA/PETG' },
+  tire: { n: 4, label: 'Battistrada', file: 'battistrada', fileEn: 'tread', mat: 'TPU' },
+  pin: { n: 5, label: 'Perno', file: 'perno', fileEn: 'pin', mat: 'PLA/PETG' },
+  spacers: { n: 6, label: 'Distanziali ×2', file: 'distanziali-x2', fileEn: 'spacers-x2', mat: 'PLA/PETG' },
 };
+const matFile = (k) => PARTS[k].mat.replace('/', '-');
+// es. stamproller_CIAO_15mm_3-mozzo-608_PLA-PETG.stl
+function baseName() {
+  const tip = document.querySelector('input[name=tipSize]:checked').value;
+  return `stamproller_${slug()}_${tip}mm`;
+}
+function partFile(k, ext = 'stl') {
+  const P = PARTS[k], i = lastResult.info;
+  let name = isEn ? P.fileEn : P.file;
+  if (k === 'hub' && i.bearing) name += '-608';
+  if (k === 'pin') name += `-${i.axleD}mm`;
+  return `${baseName()}_${P.n}-${name}_${matFile(k)}.${ext}`;
+}
 const SPINNING = ['hub', 'tire', 'roller'];
 
 // Pezzi in fila sul piatto, centrati: x calcolato dagli ingombri reali.
@@ -249,18 +263,33 @@ function drawImprint() {
   const pxmm = (H - 16) / info.rollerWidth;
   const os2 = font.tables.os2;
   const capRatio = os2 && os2.sCapHeight ? os2.sCapHeight / font.unitsPerEm : 0.7;
-  const size = (p.textH / capRatio) * info.textScale * pxmm;
-  const probe = font.getPath(p.text.trim(), 0, 0, size).getBoundingBox();
-  const yBase = H / 2 - (probe.y1 + probe.y2) / 2;
+  const fsize = p.textH / capRatio;                  // dimensione del font in mm, come in geometry.js
+  const sx = info.textScaleX || 1;
+  // stesse regole del rullo: parole composte una per una con lo spazio corto
+  const words = p.text.trim().split(/\s+/).filter(Boolean);
+  const wordsPath = (x0, y0) => {
+    const out = new Path();
+    let x = x0;
+    for (const w of words) { out.extend(font.getPath(w, x, y0, fsize)); x += font.getAdvanceWidth(w, fsize) + WORD_SPACE; }
+    return out;
+  };
+  const probe = wordsPath(0, 0).getBoundingBox();
   // striscia del rullo
   ctx.fillStyle = 'rgba(0,0,0,.06)';
   ctx.fillRect(0, H / 2 - (info.rollerWidth * pxmm) / 2, W, info.rollerWidth * pxmm);
   ctx.globalAlpha = 0.86;
+  const k = info.textScale * pxmm;                   // mm del font -> pixel
   const step = info.pitchU * pxmm;
-  for (let x = 12 - probe.x1, i = 0; x < W + step; x += step, i++) {
-    const path = font.getPath(p.text.trim(), x, yBase, size);
-    path.fill = getComputedStyle(document.documentElement).getPropertyValue('--ink');
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink');
+  for (let x = 12; x < W + step; x += step) {
+    ctx.save();
+    ctx.translate(x, H / 2);
+    ctx.scale(k * sx, k);
+    ctx.translate(-probe.x1, -(probe.y1 + probe.y2) / 2);
+    const path = wordsPath(0, 0);
+    path.fill = ink;
     path.draw(ctx);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
   // tacche di giro
@@ -299,7 +328,7 @@ function requestBuild() {
 
 async function doBuild() {
   const p = readParams();
-  store.set('params2', p); // v2: misure punta corrette, le vecchie (15×5) non vanno ricaricate
+  store.set('params3', p); // v3: spazio tra ripetizioni 3 mm (10 faceva incastrare la punta)
   $('rollerD').disabled = p.diameterMode !== 'fixed';
   const id = ++reqId;
   let entry;
@@ -324,6 +353,7 @@ function onResult({ data }, w) {
   renderWarnings(data.warnings);
   drawImprint();
   $('dl3mf').disabled = false;
+  $('dlZip').disabled = false;
   const split = !!data.print.tire;
   $('dl3mf').textContent = split ? 'Pezzi rigidi PLA/PETG (.3mf)' : 'Kit completo (.3mf)';
   $('dl3mfTpu').hidden = !split;
@@ -355,7 +385,7 @@ function renderDownloads(print) {
     const b = document.createElement('button');
     b.type = 'button';
     b.innerHTML = `${PARTS[k].label} <small>${PARTS[k].mat}</small>`;
-    b.onclick = () => download(toSTL(lastResult.print[k]), `stamproller-${PARTS[k].file}${k === 'tire' || k === 'roller' ? '-' + slug() : ''}.stl`, 'model/stl');
+    b.onclick = () => download(toSTL(lastResult.print[k]), partFile(k), 'model/stl');
     box.appendChild(b);
   }
 }
@@ -371,19 +401,75 @@ function download(bytes, name, type) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
-function slug() { return ($('text').value.trim() || 'liscio').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'timbro'; }
-// Un 3MF per materiale: i pezzi rigidi insieme, il battistrada TPU da solo (piatto e impostazioni suoi).
+function slug() {
+  const s = $('text').value.trim().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+  return s || (isEn ? 'plain' : 'liscio');
+}
+// Un 3MF per materiale (i pezzi rigidi insieme, il battistrada TPU da solo), senza impostazioni di
+// stampa: solo i pezzi già disposti sul piatto. Le impostazioni sono nella tabella e nel LEGGIMI.
 function download3MF(keys, file, title) {
   const r = lastResult;
   const sub = Object.fromEntries(keys.map((k) => [k, r.print[k]]));
   const lay = printLayout(sub);
   download(to3MF(keys.map((k) => ({
-    name: `${PARTS[k].label} (${PARTS[k].mat})`, mesh: sub[k], offset: lay[k], settings: bambuObjectSettings(PRINT[k]),
+    name: `${PARTS[k].n}-${t(PARTS[k].label)} (${PARTS[k].mat})`, mesh: sub[k], offset: lay[k],
   })), { title }), file, 'model/3mf');
 }
-$('dl3mf').onclick = () => download3MF(Object.keys(lastResult.print).filter((k) => k !== 'tire'),
-  `stamproller-${slug()}${lastResult.print.tire ? '-PLA-PETG' : ''}.3mf`, `Stamp Roller ${$('text').value.trim()}`);
-$('dl3mfTpu').onclick = () => download3MF(['tire'], `stamproller-${slug()}-battistrada-TPU.3mf`, `Stamp Roller battistrada ${$('text').value.trim()}`);
+$('dl3mf').onclick = () => {
+  const split = !!lastResult.print.tire;
+  const what = split ? (isEn ? 'rigid-parts_PLA-PETG' : 'pezzi-rigidi_PLA-PETG') : 'kit_PLA-PETG';
+  download3MF(Object.keys(lastResult.print).filter((k) => k !== 'tire'), `${baseName()}_${what}.3mf`, `Stamp Roller ${$('text').value.trim()}`);
+};
+$('dl3mfTpu').onclick = () => download3MF(['tire'], partFile('tire', '3mf'), `Stamp Roller ${$('text').value.trim()} TPU`);
+$('dlZip').onclick = () => {
+  const keys = Object.keys(lastResult.print).sort((a, b) => PARTS[a].n - PARTS[b].n);
+  const files = keys.map((k) => [partFile(k), toSTL(lastResult.print[k])]);
+  files.push([isEn ? 'README.txt' : 'LEGGIMI.txt', readmeText(keys)]);
+  download(toZip(files), `${baseName()}_STL.zip`, 'application/zip');
+};
+
+// Testo del LEGGIMI nello zip: elenco file con materiale e impostazioni, viteria, montaggio.
+function readmeText(keys) {
+  const i = lastResult.info, p = readParams();
+  const L = [];
+  const row = (k) => {
+    const s = PRINT[k];
+    return isEn
+      ? `${partFile(k)}\n    ${PARTS[k].mat} · ${t(s.placement)} · walls ${s.walls} · infill ${s.infill}% · layer ${s.layer} mm`
+      : `${partFile(k)}\n    ${PARTS[k].mat} · ${s.placement} · pareti ${s.walls} · riempimento ${s.infill}% · layer ${dec(s.layer)} mm`;
+  };
+  if (isEn) {
+    L.push(`STAMP ROLLER "${p.text.trim()}" — ${p.tipNominal} mm marker`, '',
+      `Marker: Ø ${p.bodyD} mm, length ${p.markerLen} mm, tip ${p.tipW} × ${p.tipT} mm`,
+      `Roller: Ø ${i.rollerDiameter.toFixed(1)} × ${i.rollerWidth} mm, ${i.repeats} repeat(s) per turn`, '',
+      'FILES (no supports for any part)', ...keys.map(row), '',
+      'HARDWARE', i.bearing ? '  1 × 608 bearing (8×22×7, skateboard type)' : '  no bearing',
+      `  axle: ${t(i.pin)}`, '',
+      'ASSEMBLY',
+      ...(i.split ? ['  1. Slide the TPU tread onto the hub from the side without the flange, teeth aligned.'] : []),
+      ...(i.bearing ? ['  2. Press the 608 into the hub seat; push one spacer into each side hole.'] : []),
+      '  3. Drop the roller in between the arms from above, then insert the pin (or screw + lock nut).',
+      '  4. Insert the marker into the head with the tip in the slot, screw on the grip until the tip touches the roller.',
+      '  5. Too much paint on the roller? Back the grip off half a turn.', '',
+      'https://balzowits.github.io/stamp-roller/');
+  } else {
+    L.push(`STAMP ROLLER "${p.text.trim()}" — marker da ${p.tipNominal} mm`, '',
+      `Marker: Ø ${dec(p.bodyD)} mm, lunghezza ${dec(p.markerLen)} mm, punta ${dec(p.tipW)} × ${dec(p.tipT)} mm`,
+      `Rullo: Ø ${dec(i.rollerDiameter.toFixed(1))} × ${i.rollerWidth} mm, ${i.repeats} ripetizioni per giro`, '',
+      'FILE (nessun pezzo ha bisogno di supporti)', ...keys.map(row), '',
+      'VITERIA', i.bearing ? '  1 cuscinetto 608 (8×22×7, da skateboard)' : '  nessun cuscinetto',
+      `  asse: ${i.pin}`, '',
+      'MONTAGGIO',
+      ...(i.split ? ['  1. Infila il battistrada TPU sul mozzo dal lato senza bordino, allineando i denti.'] : []),
+      ...(i.bearing ? ['  2. Premi il 608 nella sede del mozzo; infila un distanziale in ciascun foro laterale.'] : []),
+      '  3. Cala il rullo dall\'alto tra i bracci, poi infila il perno (o vite + dado autobloccante).',
+      '  4. Infila il marker nella testa con la punta nella feritoia, avvita l\'impugnatura finché la punta tocca il rullo.',
+      '  5. Troppa vernice sul rullo? Svita l\'impugnatura di mezzo giro.', '',
+      'https://balzowits.github.io/stamp-roller/');
+  }
+  return L.join('\r\n') + '\r\n';
+}
 
 function renderSettings(print) {
   const rows = Object.keys(print).map((k) => {
@@ -396,7 +482,7 @@ function renderSettings(print) {
 // ------------------------------------------------------------------ eventi
 $('font').innerHTML = FONTS.map((f) => `<option value="${f.id}">${f.name}</option>`).join('');
 let presets = fillPresets();
-writeParams({ ...DEFAULTS, text: t(DEFAULTS.text), ...store.get('params2', {}), fontId: (store.get('params2', {}).fontId === 'custom' ? FONTS[0].id : store.get('params2', {}).fontId) });
+writeParams({ ...DEFAULTS, text: t(DEFAULTS.text), ...store.get('params3', {}), fontId: (store.get('params3', {}).fontId === 'custom' ? FONTS[0].id : store.get('params3', {}).fontId) });
 
 for (const el of document.querySelectorAll('.panel input:not([type=file]), .panel select:not(#preset)')) {
   el.addEventListener('input', () => {

@@ -37,7 +37,7 @@
           <input id="textH" type="number" min="4" max="20" step="0.5" value="10">
         </label>
         <label>Spazio tra ripetizioni <span class="unit">mm</span>
-          <input id="gap" type="number" min="2" max="60" step="1" value="10">
+          <input id="gap" type="number" min="1" max="15" step="0.5" value="3">
         </label>
       </div>
     </section>
@@ -57,6 +57,7 @@
         </label>
       </div>
       <p class="hint">In automatico il diametro si adatta al testo: se la scritta è corta viene ripetuta, se è troppo lunga viene rimpicciolita.</p>
+      <p class="hint">Il rullo non lascia mai tratti vuoti più lunghi dello spazio tra ripetizioni: dove non ci sono lettere la punta si infilerebbe nell'incavo e bloccherebbe il rullo. Per lo stesso motivo gli spazi tra le parole vengono accorciati.</p>
       <label class="chk opt"><input id="split" type="checkbox" checked> Rullo in due pezzi: mozzo rigido + battistrada in TPU</label>
       <p class="hint">Il battistrada morbido prende meglio la vernice e si adatta alle superfici irregolari. Si infila a pressione sul mozzo, i denti lo tengono fermo. Si può cambiare scritta ristampando solo il battistrada.</p>
       <label class="chk opt"><input id="bearing" type="checkbox" checked> Cuscinetto 608 nel rullo (22×8×7, quello degli skateboard)</label>
@@ -128,8 +129,9 @@
       <div class="dl">
         <button id="dl3mf" type="button" class="primary" disabled>Kit completo (.3mf)</button>
         <button id="dl3mfTpu" type="button" class="primary" hidden>Battistrada TPU (.3mf)</button>
+        <button id="dlZip" type="button" class="primary" disabled>Tutti gli STL (.zip)</button>
       </div>
-      <p class="hint">I file .3mf contengono pareti, riempimento e altezza layer di ogni pezzo: Bambu Studio (e OrcaSlicer) li applicano da soli, a te resta da scegliere stampante e filamento. Il battistrada TPU ha un file suo, così va su un piatto a parte.</p>
+      <p class="hint">I .3mf contengono solo i pezzi già disposti sul piatto, senza impostazioni di stampa: quelle consigliate sono nella tabella qui sotto. Il battistrada TPU ha un file suo, così va su un piatto a parte. Lo .zip contiene tutti gli STL e un LEGGIMI con impostazioni e montaggio.</p>
       <p class="hint">Oppure i singoli pezzi in STL:</p>
       <div id="dlParts" class="dl"></div>
       <dl id="info" class="info"></dl>
@@ -138,7 +140,7 @@
     <section>
       <h2>Impostazioni consigliate</h2>
       <table id="settings" class="settings"></table>
-      <p class="hint">Per tutti: niente supporti. Gli stessi valori sono già nei .3mf; con altri slicer (Cura, PrusaSlicer) impostali a mano.</p>
+      <p class="hint">Per tutti: niente supporti. I file non contengono impostazioni: impostale nello slicer (le trovi anche nel LEGGIMI dello .zip).</p>
     </section>
 
     <section>

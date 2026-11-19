@@ -1,10 +1,9 @@
-﻿// Test headless: costruisce i pezzi con vari parametri, controlla validità e collisioni.
+// Test headless: costruisce i pezzi con vari parametri, controlla validità e collisioni.
 import Module from 'manifold-3d';
 import opentype from 'opentype.js';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { buildAll } from '../geometry.js';
 import { toSTL, to3MF } from '../export.js';
-import { PRINT, bambuObjectSettings } from '../print-settings.js';
 
 const wasm = await Module();
 wasm.setup();
@@ -26,6 +25,8 @@ const cases = [
   { name: 'vite-608', p: { axle: 'screw' } },
   { name: 'vite-senza-608-unico', p: { axle: 'screw', bearing: false, split: false } },
   { name: 'punta-corta', p: { tipLen: 5 } },
+  { name: 'frase-con-spazi', p: { text: 'Andrea was here' } },
+  { name: 'fisso-allarga', p: { diameterMode: 'fixed', rollerD: 44, text: 'CIAO' } },
 ];
 
 // coppie che devono toccarsi per progetto (non sono errori)
@@ -59,12 +60,13 @@ for (const c of cases) {
   console.log(`\n[${c.name}] ${ms} ms`);
   console.log(' info', JSON.stringify(r.info, (k, v) => (typeof v === 'number' ? +v.toFixed(2) : v)));
   console.log(' warn', r.warnings);
+  console.log(` testo: Ø ${r.info.rollerDiameter.toFixed(1)}, ${r.info.repeats} rip., scaleX ${r.info.textScaleX.toFixed(2)}, vuoto max ${r.info.maxBlank.toFixed(1)} mm`);
   console.log(' contatti (mm3)', coll);
   console.log(' ingombri stampa', Object.fromEntries(Object.entries(r.print).map(([k, m]) => [k, bb(m)])));
   if (c.name === 'default') {
     for (const [k, m] of Object.entries(r.print)) writeFileSync(new URL(`../out/${k}.stl`, import.meta.url), toSTL(m.getMesh()));
     const kit = (keys) => to3MF(keys.map((k, i) => ({
-      name: k, mesh: r.print[k].getMesh(), offset: [i * 50 - 100, 0], settings: bambuObjectSettings(PRINT[k]),
+      name: k, mesh: r.print[k].getMesh(), offset: [i * 50 - 100, 0],
     })), { title: 'test' });
     writeFileSync(new URL('../out/kit.3mf', import.meta.url), kit(Object.keys(r.print).filter((k) => k !== 'tire')));
     writeFileSync(new URL('../out/tpu.3mf', import.meta.url), kit(['tire']));

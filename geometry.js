@@ -20,7 +20,7 @@ export const DEFAULTS = {
   text: 'CIAO',
   textH: 10,        // altezza delle maiuscole
   relief: 1.2,      // rilievo delle lettere
-  gap: 10,          // spazio tra una ripetizione e l'altra
+  gap: 3,           // spazio tra una ripetizione e l'altra (corto: la punta non deve trovare vuoti)
   diameterMode: 'auto', // 'auto' | 'fixed'
   rollerD: 36,      // diametro esterno (solo in modalità fixed)
   minStroke: 0.8,   // tratto minimo stampabile
@@ -81,8 +81,17 @@ const K = {
 export const LIMITS = { rMin: K.rMin, rMax: K.rMax, threadAdjust: K.threadLen - K.threadEng - 0 };
 
 // ---------------------------------------------------------------- testo -> CrossSection
+// Spazio tra le parole: quello del font (~0,25 em) lascia un vuoto dove la punta si incastra;
+// le parole vengono composte una per una con uno spazio corto.
+export const WORD_SPACE = 1.8; // mm di avanzamento per ogni spazio (alla dimensione del testo)
 function textCross(CrossSection, font, text, size) {
-  const path = font.getPath(text, 0, 0, size);
+  const words = text.split(/\s+/).filter(Boolean);
+  const path = { commands: [] };
+  let x0 = 0;
+  for (const w of words) {
+    path.commands.push(...font.getPath(w, x0, 0, size).commands);
+    x0 += font.getAdvanceWidth(w, size) + WORD_SPACE;
+  }
   const contours = [];
   let cur = [];
   let px = 0, py = 0;
@@ -115,27 +124,55 @@ function textCross(CrossSection, font, text, size) {
 }
 
 // Calcola raggio, numero di ripetizioni e scala del testo sul rullo.
+// Regola d'oro: lo spazio vuoto tra le ripetizioni NON si allarga mai oltre `gap`. La punta tocca il
+// rullo su tutta la larghezza: dove per qualche mm non c'è nessuna lettera il feltro si rilassa
+// nell'incavo e poi urta il bordo della lettera dopo, bloccando il rullo (prova reale 19/11/2026).
+//  - automatico: si aggiungono ripetizioni e il diametro cresce quanto serve;
+//  - fisso: la scritta si allarga o si stringe in orizzontale (scaleX) per chiudere il giro.
 export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin) {
   const unit = textW + gap;
-  let scale = 1, n = 1, Ro;
+  let scale = 1, scaleX = 1, n = 1, Ro;
   if (mode === 'fixed') {
     Ro = Math.min(Math.max(rollerD / 2, rMin), K.rMax);
     const C = TAU * Ro;
-    n = Math.floor(C / unit);
-    if (n < 1) { n = 1; scale = (C - gap) / textW; }
+    n = Math.max(1, Math.round(C / unit));
+    const sx = (C / n - gap) / textW;
+    if (n === 1 && sx < 1) scale = sx; // una sola ripetizione troppo lunga: rimpicciolisco tutto
+    else scaleX = sx;
   } else {
     Ro = unit / TAU;
     if (Ro < rMin) {
-      // rullo al minimo: quante ripetizioni ci stanno, gli spazi si allargano per chiudere il giro
-      Ro = rMin;
-      n = Math.max(1, Math.floor((TAU * rMin) / unit));
+      n = Math.ceil((TAU * rMin) / unit);
+      Ro = (n * unit) / TAU;
+      if (Ro > K.rMax) {
+        // con una ripetizione in più il rullo esce dal massimo: resto al minimo e adatto la scritta
+        Ro = rMin;
+        n = Math.max(1, Math.round((TAU * rMin) / unit));
+        scaleX = ((TAU * rMin) / n - gap) / textW;
+      }
     } else if (Ro > K.rMax) {
       Ro = K.rMax;
       scale = (TAU * Ro - gap) / textW;
     }
   }
-  return { Ro, n, scale, C: TAU * Ro, pitchU: (TAU * Ro) / n };
+  return { Ro, n, scale, scaleX, C: TAU * Ro, pitchU: (TAU * Ro) / n };
 }
+
+// Vuoto più lungo DENTRO la scritta (spazi tra parole, lettere distanti), in mm lungo il giro.
+function maxInnerBlank(cs) {
+  const iv = cs.toPolygons().map((poly) => {
+    let a = Infinity, b = -Infinity;
+    for (const [x] of poly) { if (x < a) a = x; if (x > b) b = x; }
+    return [a, b];
+  }).sort((p, q) => p[0] - q[0]);
+  let maxGap = 0, end = -Infinity;
+  for (const [a, b] of iv) {
+    if (end > -Infinity && a > end) maxGap = Math.max(maxGap, a - end);
+    end = Math.max(end, b);
+  }
+  return maxGap;
+}
+export const MAX_BLANK = 4; // oltre questo vuoto la punta rischia di incastrarsi
 
 // ---------------------------------------------------------------- costruzione
 export function buildAll(wasm, font, params) {
@@ -190,7 +227,17 @@ export function buildAll(wasm, font, params) {
       warnings.push(`Testo troppo lungo per il diametro massimo (${2 * K.rMax} mm): ridotto al ${Math.round(L.scale * 100)}%.`);
       bw *= L.scale; bh *= L.scale;
     }
+    if (Math.abs(L.scaleX - 1) > 0.001) {
+      cs = cs.scale([L.scaleX, 1]);
+      bw *= L.scaleX;
+      if (L.scaleX > 1.2 || L.scaleX < 0.8) warnings.push(`La scritta viene ${L.scaleX > 1 ? 'allargata' : 'stretta'} al ${Math.round(L.scaleX * 100)}% per chiudere il giro senza vuoti: se non ti piace cambia diametro o testo.`);
+    }
     Ro = L.Ro;
+    const inner = maxInnerBlank(cs);
+    const blank = Math.max(inner, L.pitchU - bw);
+    if (blank > MAX_BLANK + 0.05) {
+      warnings.push(`C'è un tratto di ${blank.toFixed(1)} mm senza lettere: la punta può infilarcisi e bloccare il rullo. Riduci lo spazio tra ripetizioni o sostituisci gli spazi tra le parole con un trattino o un punto.`);
+    }
 
     // tratto minimo: quanto del testo sparisce se tolgo i tratti più sottili di minStroke
     const area = cs.area();
@@ -210,7 +257,7 @@ export function buildAll(wasm, font, params) {
       const u = v[0], w = v[1], r = Rbase + v[2], th = u / Ro;
       v[0] = w + fl / 2; v[1] = r * Math.cos(th); v[2] = r * Math.sin(th);
     });
-    textInfo = { n: L.n, scale: hScale * L.scale, textW: bw, textHreal: bh, C: L.C, pitchU: L.pitchU };
+    textInfo = { n: L.n, scale: hScale * L.scale, scaleX: L.scaleX, textW: bw, textHreal: bh, C: L.C, pitchU: L.pitchU, maxBlank: blank };
   } else {
     Ro = p.diameterMode === 'fixed' ? Math.min(Math.max(p.rollerD / 2, rMinEff), K.rMax) : rMinEff;
     warnings.push('Nessun testo: il rullo è liscio.');
@@ -439,6 +486,8 @@ export function buildAll(wasm, font, params) {
     rollerWidth: W,
     repeats: textInfo.n,
     textScale: textInfo.scale,
+    textScaleX: textInfo.scaleX || 1,
+    maxBlank: textInfo.maxBlank || 0,
     textWidth: textInfo.textW,
     textHeight: textInfo.textHreal,
     circumference: TAU * Ro,
@@ -450,6 +499,7 @@ export function buildAll(wasm, font, params) {
     adjust: Lt - K.threadEng - 0,
     adjustBack: K.threadEng - 6,
     bearing,
+    axleD: AX.d,
     pin: useScrew ? `vite M${AX.d}×${screwL} + dado autobloccante` : `perno stampato Ø${AX.d} mm, a scatto`,
     bearingTxt: bearing ? 'cuscinetto 608 (22×8×7)' : 'nessuno',
   };

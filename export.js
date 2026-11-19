@@ -55,8 +55,15 @@ export function to3MF(objects, { title, center = [128, 128] } = {}) {
     ['[Content_Types].xml', enc.encode(ct)],
     ['_rels/.rels', enc.encode(rels)],
     ['3D/3dmodel.model', enc.encode(model)],
-    ['Metadata/model_settings.config', enc.encode(modelSettings)],
+    // impostazioni per oggetto solo se richieste (oggi il sito non le passa: 3MF "puliti")
+    ...(objects.some((o) => o.settings) ? [['Metadata/model_settings.config', enc.encode(modelSettings)]] : []),
   ]);
+}
+
+// ZIP di più file: [[nome, Uint8Array | stringa], ...]
+export function toZip(files) {
+  const enc = new TextEncoder();
+  return zipStore(files.map(([n, d]) => [n, typeof d === 'string' ? enc.encode(d) : d]));
 }
 
 const CRC = (() => {
