@@ -22,7 +22,7 @@ export const DEFAULTS = {
   relief: 1.2,      // rilievo delle lettere
   gap: 3,           // spazio tra una ripetizione e l'altra (corto: la punta non deve trovare vuoti)
   diameterMode: 'auto', // 'auto' | 'fixed'
-  rollerD: 40,      // diametro esterno (solo in modalità fixed = rulli intercambiabili)
+  rollerD: 50,      // diametro esterno (solo in modalità fixed = rulli intercambiabili)
   minStroke: 0.8,   // tratto minimo stampabile
   split: true,      // rullo in due pezzi: mozzo rigido + battistrada TPU
   bearing: true,    // cuscinetto 608 (22×8×7) nel rullo, asse da 8 mm
@@ -74,7 +74,8 @@ const K = {
   tpuFit: 0.1,     // interferenza del battistrada sul mozzo
   contact: 0.3,    // interferenza punta-lettere
   rMin: 12,        // raggio esterno minimo del rullo
-  rMax: 24,        // raggio esterno massimo
+  rMax: 24,        // raggio esterno massimo (su misura)
+  rMaxFixed: 30,   // raggio esterno massimo dei rulli intercambiabili (Ø 60)
   textMargin: 1,   // margine del testo sui fianchi del rullo
 };
 
@@ -136,7 +137,7 @@ export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin) {
   const unit = textW + gap;
   let scale = 1, scaleX = 1, n = 1, Ro;
   if (mode === 'fixed') {
-    Ro = Math.min(Math.max(rollerD / 2, rMin), K.rMax);
+    Ro = Math.min(Math.max(rollerD / 2, rMin), K.rMaxFixed);
     const C = TAU * Ro;
     n = Math.max(1, Math.round(C / unit));
     const sx = (C / n - gap) / textW;
@@ -264,7 +265,7 @@ export function buildAll(wasm, font, params) {
     });
     textInfo = { n: L.n, scale: hScale * L.scale, scaleX: L.scaleX, textW: bw, textHreal: bh, C: L.C, pitchU: L.pitchU, maxBlank: blank };
   } else {
-    Ro = p.diameterMode === 'fixed' ? Math.min(Math.max(p.rollerD / 2, rMinEff), K.rMax) : rMinEff;
+    Ro = p.diameterMode === 'fixed' ? Math.min(Math.max(p.rollerD / 2, rMinEff), K.rMaxFixed) : rMinEff;
     warnings.push('Nessun testo: il rullo è liscio.');
   }
 

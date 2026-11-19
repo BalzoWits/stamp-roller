@@ -26,6 +26,8 @@ const cases = [
   { name: 'vite-senza-608-unico', p: { axle: 'screw', bearing: false, split: false } },
   { name: 'punta-corta', p: { tipLen: 5 } },
   { name: 'frase-con-spazi', p: { text: 'Andrea was here' } },
+  { name: 'fisso-60', p: { diameterMode: 'fixed', rollerD: 60, text: 'slim.doingthings', textH: 15 } },
+  { name: 'fisso-60-unico-senza-608', p: { diameterMode: 'fixed', rollerD: 60, split: false, bearing: false } },
   { name: 'fisso-allarga', p: { diameterMode: 'fixed', rollerD: 44, text: 'CIAO' } },
 ];
 
