@@ -128,18 +128,20 @@ function textCross(CrossSection, font, text, size) {
 // rullo su tutta la larghezza: dove per qualche mm non c'è nessuna lettera il feltro si rilassa
 // nell'incavo e poi urta il bordo della lettera dopo, bloccando il rullo (prova reale 19/11/2026).
 //  - automatico: si aggiungono ripetizioni e il diametro cresce quanto serve;
-//  - fisso (rulli intercambiabili: la testa dipende solo dal diametro, non dalla scritta): si sceglie
-//    il numero di ripetizioni e la scritta si scala IN MODO UNIFORME per chiudere il giro; se così
-//    diventerebbe più alta del rullo (maxUp), si ferma all'altezza massima e il resto è allargamento.
-export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin, maxUp = Infinity) {
+//  - fisso (rulli intercambiabili: la testa dipende solo dal diametro, non dalla scritta): l'ALTEZZA
+//    delle lettere resta quella impostata; la scritta si ripete quante volte ci sta (ripetizioni
+//    arrotondate al più vicino) e il resto del giro si chiude allargando o stringendo un poco le
+//    lettere solo in orizzontale. Solo se non ci sta nemmeno una volta si rimpicciolisce tutta.
+export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin) {
   const unit = textW + gap;
   let scale = 1, scaleX = 1, n = 1, Ro;
   if (mode === 'fixed') {
     Ro = Math.min(Math.max(rollerD / 2, rMin), K.rMax);
     const C = TAU * Ro;
     n = Math.max(1, Math.round(C / unit));
-    const s = (C / n - gap) / textW;
-    if (s > maxUp) { scale = maxUp; scaleX = s / maxUp; } else scale = s;
+    const sx = (C / n - gap) / textW;
+    if (n === 1 && sx < 0.85) scale = sx; // più lunga del giro: rimpicciolisco tutto
+    else scaleX = sx;
   } else {
     Ro = unit / TAU;
     if (Ro < rMin) {
@@ -223,17 +225,17 @@ export function buildAll(wasm, font, params) {
     bw *= hScale; bh *= hScale;
 
     const fixed = p.diameterMode === 'fixed';
-    const L = layoutText(bw, p.gap, p.diameterMode, p.rollerD, rMinEff, hAvail / bh);
+    const L = layoutText(bw, p.gap, p.diameterMode, p.rollerD, rMinEff);
     if (Math.abs(L.scale - 1) > 0.001) {
       cs = cs.scale([L.scale, L.scale]);
       if (!fixed) warnings.push(`Testo troppo lungo per il diametro massimo (${2 * K.rMax} mm): ridotto al ${Math.round(L.scale * 100)}%.`);
-      else if (L.scale < 0.6) warnings.push(`Col rullo da Ø ${2 * L.Ro} mm la scritta è ridotta al ${Math.round(L.scale * 100)}%: è molto lunga, accorciala o usa un rullo più grande.`);
+      else warnings.push(`Col rullo da Ø ${2 * L.Ro} mm la scritta non ci sta nemmeno una volta: è ridotta al ${Math.round(L.scale * 100)}%. Accorciala o usa un rullo più grande.`);
       bw *= L.scale; bh *= L.scale;
     }
     if (Math.abs(L.scaleX - 1) > 0.001) {
       cs = cs.scale([L.scaleX, 1]);
       bw *= L.scaleX;
-      if (L.scaleX > 1.2 || L.scaleX < 0.8) warnings.push(`La scritta viene ${L.scaleX > 1 ? 'allargata' : 'stretta'} al ${Math.round(L.scaleX * 100)}% per chiudere il giro senza vuoti: se non ti piace cambia diametro o testo.`);
+      if (L.scaleX > 1.2 || L.scaleX < 0.85) warnings.push(`La scritta viene ${L.scaleX > 1 ? 'allargata' : 'stretta'} al ${Math.round(L.scaleX * 100)}% per chiudere il giro senza vuoti: se non ti piace cambia diametro o testo.`);
     }
     Ro = L.Ro;
     const inner = maxInnerBlank(cs);

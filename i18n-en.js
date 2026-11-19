@@ -147,8 +147,8 @@ export const TEXT = {
 };
 
 export const HTML = {
-  '<b>Rulli intercambiabili</b>: il diametro resta quello che scegli e la scritta si ingrandisce o rimpicciolisce per chiudere il giro. Testa, impugnatura e mozzo restano identici per qualunque scritta: stampi il portamarker una volta e per ogni nuova scritta ristampi solo il battistrada (o il rullo). Tieni lo stesso diametro e le stesse misure del marker.':
-    '<b>Swappable rollers</b>: the diameter stays the one you pick and the lettering grows or shrinks to close the turn. Head, grip and hub stay identical for any text: print the holder once and for each new text reprint only the tread (or the roller). Keep the same diameter and the same marker measurements.',
+  '<b>Rulli intercambiabili</b>: il diametro resta quello che scegli e le lettere tengono l\'altezza impostata; la scritta si ripete quante volte ci sta e, per chiudere il giro senza vuoti, le lettere si allargano o stringono un poco in orizzontale. Testa, impugnatura e mozzo restano identici per qualunque scritta: stampi il portamarker una volta e per ogni nuova scritta ristampi solo il battistrada (o il rullo). Tieni lo stesso diametro e le stesse misure del marker.':
+    '<b>Swappable rollers</b>: the diameter stays the one you pick and the letters keep the height you set; the text is repeated as many times as it fits and, to close the turn without blank stretches, the letters get slightly wider or narrower horizontally. Head, grip and hub stay identical for any text: print the holder once and for each new text reprint only the tread (or the roller). Keep the same diameter and the same marker measurements.',
   '<b>Testa</b> in piedi con i bracci verso l\'alto, <b>impugnatura</b> col fondo sul piatto, <b>mozzo</b> col bordino sul piatto, <b>perno</b> sdraiato sul lato piatto. Non servono supporti.':
     '<b>Head</b> upright with the arms up, <b>grip</b> with its bottom on the bed, <b>hub</b> with the flange on the bed, <b>pin</b> lying on its flat side. No supports needed.',
   '<b>Battistrada in TPU</b> (95A), in piedi, lento (20–30 mm/s), layer da 0,12–0,16 mm per lettere nitide.':
@@ -192,8 +192,8 @@ export const PATTERNS = [
   [re(`Testo troppo lungo per il diametro massimo \\(${N} mm\\): ridotto al (\\d+)%\\.`), 'Text too long for the maximum diameter ($1 mm): scaled to $2%.'],
   [re(`Tratti sottili: circa il (\\d+)% del testo è sotto ${N} mm\\. Aumenta l'altezza o usa un font più grosso\\.`),
     'Thin strokes: about $1% of the text is under $2 mm. Increase the height or use a bolder font.'],
-  [re(`Col rullo da Ø ${N} mm la scritta è ridotta al (\\d+)%: è molto lunga, accorciala o usa un rullo più grande\\.`),
-    'With a Ø $1 mm roller the lettering is scaled to $2%: it is very long, shorten it or use a bigger roller.'],
+  [re(`Col rullo da Ø ${N} mm la scritta non ci sta nemmeno una volta: è ridotta al (\\d+)%\\. Accorciala o usa un rullo più grande\\.`),
+    'With a Ø $1 mm roller the lettering doesn\'t fit even once: it is scaled to $2%. Shorten it or use a bigger roller.'],
   [re(`La scritta viene (allargata|stretta) al (\\d+)% per chiudere il giro senza vuoti: se non ti piace cambia diametro o testo\\.`),
     (_, w, n) => `The lettering is ${w === 'allargata' ? 'stretched' : 'squeezed'} to ${n}% to close the turn without blank stretches: if you don't like it, change the diameter or the text.`],
   [re(`C'è un tratto di ${N} mm senza lettere: la punta può infilarcisi e bloccare il rullo\\. Riduci lo spazio tra ripetizioni o sostituisci gli spazi tra le parole con un trattino o un punto\\.`),

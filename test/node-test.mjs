@@ -35,8 +35,8 @@ let failed = false;
 
 // Rulli intercambiabili: a diametro fisso la testa (e il mozzo) non devono dipendere dalla scritta.
 {
-  const texts = ['CIAO', 'Andrea was here', 'X', 'GRAFFITI 2026'];
-  const builds = texts.map((text) => buildAll(wasm, font, { diameterMode: 'fixed', rollerD: 40, text }));
+  const texts = ['CIAO', 'Andrea was here', 'X', 'GRAFFITI 2026', 'slim.doingthings'];
+  const builds = texts.map((text) => buildAll(wasm, font, { diameterMode: 'fixed', rollerD: 40, text, textH: 15 }));
   const sig = (m) => { const b = m.boundingBox(); return [m.volume().toFixed(2), ...b.min, ...b.max].map((v) => (+v).toFixed(2)).join(','); };
   const heads = new Set(builds.map((r) => sig(r.print.head)));
   const hubs = new Set(builds.map((r) => sig(r.print.hub)));
