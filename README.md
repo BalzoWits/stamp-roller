@@ -48,6 +48,13 @@ rilassava nell'incavo e al giro dopo urtava la lettera successiva, bloccando il 
 - gli spazi tra le parole sono accorciati a 1,8 mm (`WORD_SPACE`);
 - un controllo misura il vuoto più lungo (`maxInnerBlank` + spazio di ripetizione) e avvisa sopra 4 mm.
 
+## Rulli intercambiabili (diametro fisso)
+
+La testa dipende solo da marker, punta e diametro del rullo (lunghezza dei bracci), mai dalla scritta. A diametro
+fisso la scritta sceglie il numero di ripetizioni e si scala in modo uniforme per chiudere il giro (se diventa più
+alta del rullo si ferma e il resto è allargamento orizzontale): testa, impugnatura e mozzo restano identici, per
+una nuova scritta si ristampa solo il battistrada (o il rullo). Il test lo verifica con quattro scritte diverse.
+
 ## Download
 
 3MF senza impostazioni di stampa (un file per i pezzi rigidi, uno per il battistrada TPU) e uno ZIP con tutti

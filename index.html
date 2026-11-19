@@ -45,18 +45,19 @@
     <section>
       <h2>Rullo</h2>
       <div class="seg" role="radiogroup" aria-label="Diametro">
-        <label><input type="radio" name="diameterMode" value="auto" checked> Diametro automatico</label>
-        <label><input type="radio" name="diameterMode" value="fixed"> Diametro fisso</label>
+        <label><input type="radio" name="diameterMode" value="auto" checked> Su misura della scritta</label>
+        <label><input type="radio" name="diameterMode" value="fixed"> Fisso: rulli intercambiabili</label>
       </div>
       <div class="row">
         <label id="rollerDWrap">Diametro <span class="unit">mm</span>
-          <input id="rollerD" type="number" min="24" max="48" step="1" value="36">
+          <input id="rollerD" type="number" min="24" max="48" step="1" value="40">
         </label>
         <label>Rilievo <span class="unit">mm</span>
           <input id="relief" type="number" min="0.6" max="2.5" step="0.1" value="1.2">
         </label>
       </div>
-      <p class="hint">In automatico il diametro si adatta al testo: se la scritta è corta viene ripetuta, se è troppo lunga viene rimpicciolita.</p>
+      <p class="hint">Su misura: il diametro si adatta al testo (scritta corta ripetuta, troppo lunga rimpicciolita). Ogni scritta ha il suo portamarker.</p>
+      <p class="hint"><b>Rulli intercambiabili</b>: il diametro resta quello che scegli e la scritta si ingrandisce o rimpicciolisce per chiudere il giro. Testa, impugnatura e mozzo restano identici per qualunque scritta: stampi il portamarker una volta e per ogni nuova scritta ristampi solo il battistrada (o il rullo). Tieni lo stesso diametro e le stesse misure del marker.</p>
       <p class="hint">Il rullo non lascia mai tratti vuoti più lunghi dello spazio tra ripetizioni: dove non ci sono lettere la punta si infilerebbe nell'incavo e bloccherebbe il rullo. Per lo stesso motivo gli spazi tra le parole vengono accorciati.</p>
       <label class="chk opt"><input id="split" type="checkbox" checked> Rullo in due pezzi: mozzo rigido + battistrada in TPU</label>
       <p class="hint">Il battistrada morbido prende meglio la vernice e si adatta alle superfici irregolari. Si infila a pressione sul mozzo, i denti lo tengono fermo. Si può cambiare scritta ristampando solo il battistrada.</p>

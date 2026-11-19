@@ -33,6 +33,18 @@ const cases = [
 const EXPECTED = new Set(['hub^tire', 'ghost^tire', 'ghost^roller']);
 let failed = false;
 
+// Rulli intercambiabili: a diametro fisso la testa (e il mozzo) non devono dipendere dalla scritta.
+{
+  const texts = ['CIAO', 'Andrea was here', 'X', 'GRAFFITI 2026'];
+  const builds = texts.map((text) => buildAll(wasm, font, { diameterMode: 'fixed', rollerD: 40, text }));
+  const sig = (m) => { const b = m.boundingBox(); return [m.volume().toFixed(2), ...b.min, ...b.max].map((v) => (+v).toFixed(2)).join(','); };
+  const heads = new Set(builds.map((r) => sig(r.print.head)));
+  const hubs = new Set(builds.map((r) => sig(r.print.hub)));
+  builds.forEach((r, i) => console.log(` [fisso Ø40] "${texts[i]}": ${r.info.repeats} rip., scala ${(r.info.textScale * 100).toFixed(0)}%, scaleX ${r.info.textScaleX.toFixed(2)}, vuoto max ${r.info.maxBlank.toFixed(1)}, avvisi ${r.warnings.length}`));
+  console.log(` testa uguale per tutte le scritte: ${heads.size === 1}, mozzo uguale: ${hubs.size === 1}`);
+  if (heads.size !== 1 || hubs.size !== 1) failed = true;
+}
+
 mkdirSync(new URL('../out/', import.meta.url), { recursive: true });
 for (const c of cases) {
   const t0 = performance.now();

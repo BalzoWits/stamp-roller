@@ -22,7 +22,7 @@ export const DEFAULTS = {
   relief: 1.2,      // rilievo delle lettere
   gap: 3,           // spazio tra una ripetizione e l'altra (corto: la punta non deve trovare vuoti)
   diameterMode: 'auto', // 'auto' | 'fixed'
-  rollerD: 36,      // diametro esterno (solo in modalità fixed)
+  rollerD: 40,      // diametro esterno (solo in modalità fixed = rulli intercambiabili)
   minStroke: 0.8,   // tratto minimo stampabile
   split: true,      // rullo in due pezzi: mozzo rigido + battistrada TPU
   bearing: true,    // cuscinetto 608 (22×8×7) nel rullo, asse da 8 mm
@@ -128,17 +128,18 @@ function textCross(CrossSection, font, text, size) {
 // rullo su tutta la larghezza: dove per qualche mm non c'è nessuna lettera il feltro si rilassa
 // nell'incavo e poi urta il bordo della lettera dopo, bloccando il rullo (prova reale 19/11/2026).
 //  - automatico: si aggiungono ripetizioni e il diametro cresce quanto serve;
-//  - fisso: la scritta si allarga o si stringe in orizzontale (scaleX) per chiudere il giro.
-export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin) {
+//  - fisso (rulli intercambiabili: la testa dipende solo dal diametro, non dalla scritta): si sceglie
+//    il numero di ripetizioni e la scritta si scala IN MODO UNIFORME per chiudere il giro; se così
+//    diventerebbe più alta del rullo (maxUp), si ferma all'altezza massima e il resto è allargamento.
+export function layoutText(textW, gap, mode, rollerD, rMin = K.rMin, maxUp = Infinity) {
   const unit = textW + gap;
   let scale = 1, scaleX = 1, n = 1, Ro;
   if (mode === 'fixed') {
     Ro = Math.min(Math.max(rollerD / 2, rMin), K.rMax);
     const C = TAU * Ro;
     n = Math.max(1, Math.round(C / unit));
-    const sx = (C / n - gap) / textW;
-    if (n === 1 && sx < 1) scale = sx; // una sola ripetizione troppo lunga: rimpicciolisco tutto
-    else scaleX = sx;
+    const s = (C / n - gap) / textW;
+    if (s > maxUp) { scale = maxUp; scaleX = s / maxUp; } else scale = s;
   } else {
     Ro = unit / TAU;
     if (Ro < rMin) {
@@ -221,10 +222,12 @@ export function buildAll(wasm, font, params) {
     cs = cs.translate([-b.min[0], -(b.min[1] + b.max[1]) / 2]).scale([hScale, hScale]);
     bw *= hScale; bh *= hScale;
 
-    const L = layoutText(bw, p.gap, p.diameterMode, p.rollerD, rMinEff);
-    if (L.scale < 1) {
+    const fixed = p.diameterMode === 'fixed';
+    const L = layoutText(bw, p.gap, p.diameterMode, p.rollerD, rMinEff, hAvail / bh);
+    if (Math.abs(L.scale - 1) > 0.001) {
       cs = cs.scale([L.scale, L.scale]);
-      warnings.push(`Testo troppo lungo per il diametro massimo (${2 * K.rMax} mm): ridotto al ${Math.round(L.scale * 100)}%.`);
+      if (!fixed) warnings.push(`Testo troppo lungo per il diametro massimo (${2 * K.rMax} mm): ridotto al ${Math.round(L.scale * 100)}%.`);
+      else if (L.scale < 0.6) warnings.push(`Col rullo da Ø ${2 * L.Ro} mm la scritta è ridotta al ${Math.round(L.scale * 100)}%: è molto lunga, accorciala o usa un rullo più grande.`);
       bw *= L.scale; bh *= L.scale;
     }
     if (Math.abs(L.scaleX - 1) > 0.001) {
